@@ -5,7 +5,7 @@ const BlueskyProfile = () => {
     <div style={styles.body}>
       <div style={styles.container}>
         <img src="/bs_logo.png" alt="Bluesky Logo" style={styles.image} />
-        <h1>Follow Me on Bluesky</h1>
+        <h1>Follow The Easy News on Bluesky</h1>
         <a
           href="https://bsky.app/profile/theeasy.news"
           style={styles.button}
