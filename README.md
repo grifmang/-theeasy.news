@@ -1,1 +1,1 @@
-# -theeasy.news
+## The Easy News
