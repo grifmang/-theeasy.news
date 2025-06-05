@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders Bluesky profile link', () => {
+test('renders articles heading', () => {
   render(<App />);
-  const heading = screen.getByText(/follow the easy news on bluesky/i);
+  const heading = screen.getByText(/articles/i);
   expect(heading).toBeInTheDocument();
 });

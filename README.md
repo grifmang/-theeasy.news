@@ -10,7 +10,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for an overview of the proposed
 Install dependencies for the front end and start it on port 3000:
 
 ```bash
-cd theeasynews
+The site now provides a simple login system, article listing with share buttons, and a page for viewing saved articles. New users can register from the login page. Articles can be saved after logging in and shared to social networks including Facebook, X/Twitter, Telegram and LinkedIn.
+
+### Running tests
+
+Inside `theeasynews/` run:
+
+```bash
+npm test -- --watchAll=false
+```
+
+React Router is used in the frontend tests so dependencies must be installed with `npm install` first.
 npm install
 npm start
 ```

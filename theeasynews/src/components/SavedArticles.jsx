@@ -1,22 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import ArticleItem from './ArticleItem';
 
 const SavedArticles = ({ userId }) => {
   const [articles, setArticles] = useState([]);
-
   useEffect(() => {
-    fetch(`http://localhost:5000/api/user/${userId}/saved`)
+    fetch(`http://localhost:4000/api/user/${userId}/saved`)
       .then(res => res.json())
-      .then(setArticles)
-      .catch(() => setArticles([]));
+      .then(data => setArticles(data.articles || []));
   }, [userId]);
 
   return (
     <div>
-      <h2>Saved Articles</h2>
+      <h1>Saved Articles</h1>
       <ul>
         {articles.map(a => (
-          <ArticleItem key={a.id} article={a} userId={userId} />
+          <li key={a.id}>{a.title}</li>
         ))}
       </ul>
     </div>
