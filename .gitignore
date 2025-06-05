@@ -1,2 +1,4 @@
 /theeasynews/node_modules
 /theeasynews/package-lock.json
+/server/node_modules
+/server/data.db
