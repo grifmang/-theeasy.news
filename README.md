@@ -1,41 +1,59 @@
 # The Easy News
 
+This repository contains a small prototype for **The Easy News**, a web application that generates AI-written news articles.
 
-This repository contains the early code for a React front end and a small Node.js API. The long‑term goal is to build an AI‑assisted news site that automatically scrapes popular publications, generates articles in unique author voices, and allows readers to save and share their favorites.  Users can log in, browse articles, save them for later, and share to social networks.
+## Structure
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for an overview of the proposed system design, including database tables and key services.
+- `theeasynews/` – React frontend created with Create React App.
+- `server/` – Node.js/Express backend with a SQLite database.
 
-## Getting Started
+## Development
 
-Install dependencies for the front end and start it on port 3000:
+1. Install dependencies for the frontend:
+   ```bash
+   cd theeasynews
+   npm install
+   ```
 
-```bash
-cd theeasynews
-npm install
-npm start
-```
-The front end uses `react-router-dom` for navigation and `react-share` for share buttons. These packages are installed with `npm install`.
+2. Install backend dependencies:
+   ```bash
+   cd ../server
+   npm install
+   ```
 
-The API server lives in the `server` folder. Install its dependencies and start it on port 5000:
+3. Start the backend server:
+   ```bash
+   node index.js
+   ```
+   The server listens on port `4000` by default.
+
+4. In another terminal, start the React development server:
+   ```bash
+   cd ../theeasynews
+   npm start
+   ```
+
+The frontend is served at `http://localhost:3000` and communicates with the backend API at `http://localhost:4000`.
+
+The site now provides a simple login system, article listing with share buttons, and a page for viewing saved articles. New users can register from the login page. Articles can be saved after logging in and shared to social networks including Facebook, X/Twitter, Telegram and LinkedIn.
+
+### Scraping news
+
+To fetch headlines from the New York Times RSS feed into the local database run:
 
 ```bash
 cd server
-npm install
-npm start
+npm run scrape
 ```
 
-The React app expects the API at `http://localhost:5000` when running locally.
-After logging in, navigate to `/saved` to see articles you've saved from the home page.
+This inserts the latest headlines as articles that can later be expanded into AI-written pieces.
 
-## Scraper Service
+### Running tests
 
-A simple script in `scraper/` fetches the latest headlines from NewsAPI and stores them in the SQLite database used by the API. Set the `NEWS_API_KEY` environment variable before running:
+Inside `theeasynews/` run:
 
 ```bash
-cd scraper
-npm install
-NEWS_API_KEY=your_key npm start
+npm test -- --watchAll=false
 ```
 
-Articles will appear in the `source_articles` table and can later be used by the AI author service.
-
+React Router is used in the frontend tests so dependencies must be installed with `npm install` first.

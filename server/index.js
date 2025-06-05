@@ -74,31 +74,45 @@ app.post('/api/articles', (req, res) => {
   const stmt = db.prepare('INSERT INTO articles (title, content, author) VALUES (?, ?, ?)');
   const info = stmt.run(title, content, author);
   res.json({ articleId: info.lastInsertRowid });
-
 });
 
 app.post('/api/save', (req, res) => {
   const { userId, articleId } = req.body;
-
-  if (!userId || !articleId) return res.status(400).json({ error: 'missing params' });
-  const stmt = db.prepare('INSERT INTO saved_articles (user_id, article_id) VALUES (?, ?)');
-  stmt.run(userId, articleId, function(err) {
-    if (err) return res.status(500).json({ error: 'db error' });
-    res.json({ id: this.lastID });
-  });
+  if (!userId || !articleId) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+  const stmt = db.prepare('INSERT OR IGNORE INTO saved_articles (user_id, article_id) VALUES (?, ?)');
+  stmt.run(userId, articleId);
+  res.json({ message: 'Saved' });
 });
 
-app.get('/api/user/:id/saved', (req, res) => {
-  db.all(
-    'SELECT ga.* FROM generated_articles ga JOIN saved_articles sa ON ga.id = sa.article_id WHERE sa.user_id = ? ORDER BY sa.saved_at DESC',
-    [req.params.id],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: 'db error' });
-      res.json(rows);
-    }
+app.get('/api/user/:userId/saved', (req, res) => {
+  const { userId } = req.params;
+  const stmt = db.prepare(
+    `SELECT articles.* FROM articles JOIN saved_articles ON articles.id = saved_articles.article_id WHERE saved_articles.user_id = ?`
   );
+  const saved = stmt.all(userId);
+  res.json({ articles: saved });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.post('/api/authors', (req, res) => {
+  const { name, prompt } = req.body;
+  if (!name || !prompt) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+  try {
+    const stmt = db.prepare('INSERT INTO authors (name, prompt) VALUES (?, ?)');
+    const info = stmt.run(name, prompt);
+    res.json({ authorId: info.lastInsertRowid });
+  } catch (err) {
+    res.status(400).json({ error: 'Author exists' });
+  }
+});
 
+app.get('/api/authors', (req, res) => {
+  const authors = db.prepare('SELECT * FROM authors').all();
+  res.json({ authors });
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log('Server running on', PORT));
