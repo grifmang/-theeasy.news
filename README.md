@@ -1,5 +1,6 @@
 # The Easy News
 
+
 This repository contains the early code for a React front end and a small Node.js API. The long‑term goal is to build an AI‑assisted news site that automatically scrapes popular publications, generates articles in unique author voices, and allows readers to save and share their favorites.  Users can log in, browse articles, save them for later, and share to social networks.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for an overview of the proposed system design, including database tables and key services.
@@ -37,3 +38,4 @@ NEWS_API_KEY=your_key npm start
 ```
 
 Articles will appear in the `source_articles` table and can later be used by the AI author service.
+

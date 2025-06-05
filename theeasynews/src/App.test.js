@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('shows login form initially', () => {
+test('renders Bluesky profile link', () => {
   render(<App />);
-  const heading = screen.getByRole('heading', { name: /login/i });
+  const heading = screen.getByText(/follow the easy news on bluesky/i);
   expect(heading).toBeInTheDocument();
 });
