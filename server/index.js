@@ -3,7 +3,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
 
-const db = new Database('data.db');
+const dbPath = process.env.DB_PATH || 'data.db';
+const db = new Database(dbPath);
 
 db.exec(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

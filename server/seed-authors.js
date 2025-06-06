@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
-const db = new Database('data.db');
+const dbPath = process.env.DB_PATH || 'data.db';
+const db = new Database(dbPath);
 
 const authors = [
   {
