@@ -48,6 +48,19 @@ npm run scrape
 
 This inserts the latest headlines as articles that can later be expanded into AI-written pieces.
 
+### Generating articles
+
+After scraping some headlines you can generate full articles using OpenAI. Set
+the `OPENAI_API_KEY` environment variable and run:
+
+```bash
+cd server
+npm run generate
+```
+
+Each run picks a random author prompt from the `authors` table and updates
+scraped articles with AI-written content.
+
 ### Running tests
 
 Inside `theeasynews/` run:

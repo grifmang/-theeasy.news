@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "scrape": "node scrape.js"
+    "scrape": "node scrape.js",
+    "generate": "node generate.js"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "rss-parser": "^3.12.0"
+    "rss-parser": "^3.12.0",
+    "openai": "^4.18.0"
   }
 }
