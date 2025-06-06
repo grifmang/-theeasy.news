@@ -25,9 +25,16 @@ CREATE TABLE IF NOT EXISTS saved_articles (
 CREATE TABLE IF NOT EXISTS authors (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT UNIQUE NOT NULL,
+  persona TEXT NOT NULL,
   prompt TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_title ON articles(title);`);
+
+// Ensure older databases have the persona column
+const authorCols = db.prepare('PRAGMA table_info(authors)').all();
+if (!authorCols.some(c => c.name === 'persona')) {
+  db.exec('ALTER TABLE authors ADD COLUMN persona TEXT DEFAULT ""');
+}
 
 const app = express();
 app.use(cors());
@@ -96,13 +103,13 @@ app.get('/api/user/:userId/saved', (req, res) => {
 });
 
 app.post('/api/authors', (req, res) => {
-  const { name, prompt } = req.body;
-  if (!name || !prompt) {
+  const { name, persona, prompt } = req.body;
+  if (!name || !persona || !prompt) {
     return res.status(400).json({ error: 'Missing fields' });
   }
   try {
-    const stmt = db.prepare('INSERT INTO authors (name, prompt) VALUES (?, ?)');
-    const info = stmt.run(name, prompt);
+    const stmt = db.prepare('INSERT INTO authors (name, persona, prompt) VALUES (?, ?, ?)');
+    const info = stmt.run(name, persona, prompt);
     res.json({ authorId: info.lastInsertRowid });
   } catch (err) {
     res.status(400).json({ error: 'Author exists' });

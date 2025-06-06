@@ -48,6 +48,30 @@ npm run scrape
 
 This inserts the latest headlines as articles that can later be expanded into AI-written pieces.
 
+### Seeding author personas
+
+Before generating articles, add some AI authors with their personas and prompts:
+
+```bash
+cd server
+npm run seed-authors
+```
+
+This populates the `authors` table so the generator can pick from them.
+
+### Generating articles
+
+After scraping some headlines you can generate full articles using OpenAI. Set
+the `OPENAI_API_KEY` environment variable and run:
+
+```bash
+cd server
+npm run generate
+```
+
+Each run picks a random author persona and prompt from the `authors` table
+and updates scraped articles with AI-written content.
+
 ### Running tests
 
 Inside `theeasynews/` run:
