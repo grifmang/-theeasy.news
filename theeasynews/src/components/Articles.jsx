@@ -4,14 +4,16 @@ import { FacebookShareButton, TwitterShareButton, TelegramShareButton, LinkedinS
 const Articles = ({ userId }) => {
   const [articles, setArticles] = useState([]);
 
+  const API = process.env.REACT_APP_API_URL;
+
   useEffect(() => {
-    fetch('http://localhost:4000/api/articles')
+    fetch(`${API}/api/articles`)
       .then(res => res.json())
       .then(data => setArticles(data.articles || []));
   }, []);
 
   const save = async (articleId) => {
-    await fetch('http://localhost:4000/api/save', {
+    await fetch(`${API}/api/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, articleId })

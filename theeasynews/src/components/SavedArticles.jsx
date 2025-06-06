@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 
 const SavedArticles = ({ userId }) => {
   const [articles, setArticles] = useState([]);
+  const API = process.env.REACT_APP_API_URL;
   useEffect(() => {
-    fetch(`http://localhost:4000/api/user/${userId}/saved`)
+    fetch(`${API}/api/user/${userId}/saved`)
       .then(res => res.json())
       .then(data => setArticles(data.articles || []));
   }, [userId]);

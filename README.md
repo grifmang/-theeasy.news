@@ -23,17 +23,20 @@ This repository contains a small prototype for **The Easy News**, a web applicat
 
 3. Start the backend server:
    ```bash
-   node index.js
+   npm start
    ```
-   The server listens on port `4000` by default.
+   The server listens on port `4000` by default. Set `DB_PATH` if you need the
+   SQLite file in a specific location.
 
 4. In another terminal, start the React development server:
    ```bash
    cd ../theeasynews
    npm start
    ```
+   Set `REACT_APP_API_URL` in a `.env` file to the URL of your backend.
 
-The frontend is served at `http://localhost:3000` and communicates with the backend API at `http://localhost:4000`.
+The frontend is served at `http://localhost:3000` and communicates with the
+backend API using that `REACT_APP_API_URL` value.
 
 The site now provides a simple login system, article listing with share buttons, and a page for viewing saved articles. New users can register from the login page. Articles can be saved after logging in and shared to social networks including Facebook, X/Twitter, Telegram and LinkedIn.
 
@@ -81,3 +84,21 @@ npm test -- --watchAll=false
 ```
 
 React Router is used in the frontend tests so dependencies must be installed with `npm install` first.
+
+## Deployment
+
+### Backend on Railway
+
+1. Create a new Node.js service in Railway and connect this repository.
+2. Set environment variables:
+   - `PORT` (if different from `4000`)
+   - `DB_PATH` – path to the SQLite file (e.g. `/data/data.db` on a persistent volume)
+   - `OPENAI_API_KEY` for article generation
+3. Railway will run `npm start` from the `server/` directory to launch the Express app.
+
+### Frontend on Netlify
+
+1. In Netlify, create a new site from this repository and configure the build directory `theeasynews`.
+2. Set the build command to `npm run build` and publish directory to `build` (already defined in `netlify.toml`).
+3. Add an environment variable `REACT_APP_API_URL` pointing to the Railway backend URL.
+4. Deploy – Netlify will build the React app and serve the static files.

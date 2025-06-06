@@ -2,7 +2,8 @@ const Parser = require('rss-parser');
 const Database = require('better-sqlite3');
 
 const parser = new Parser();
-const db = new Database('data.db');
+const dbPath = process.env.DB_PATH || 'data.db';
+const db = new Database(dbPath);
 
 async function scrape() {
   const feed = await parser.parseURL('https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml');
