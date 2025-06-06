@@ -8,6 +8,7 @@
     "scrape": "node scrape.js",
     "generate": "node generate.js",
     "seed-authors": "node seed-authors.js"
+
   },
   "keywords": [],
   "author": "",
