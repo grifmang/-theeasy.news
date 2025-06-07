@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, TelegramShareButton, LinkedinShareButton } from 'react-share';
 
 const Articles = ({ userId }) => {
@@ -26,23 +27,17 @@ const Articles = ({ userId }) => {
       <ul>
         {articles.map(a => (
           <li className="article-item" key={a.id}>
-            <h3 className="article-title">{a.title}</h3>
+            <h3 className="article-title">
+              <Link to={`/articles/${a.id}`}>{a.title}</Link>
+            </h3>
             <p>{a.content}</p>
             <small className="article-author">By {a.author}</small>
             {userId && <button onClick={() => save(a.id)}>Save</button>}
             <div className="share-buttons">
-              <FacebookShareButton url={`https://theeasy.news/articles/${a.id}`}> 
-                Share to Facebook
-              </FacebookShareButton>
-              <TwitterShareButton url={`https://theeasy.news/articles/${a.id}`}> 
-                Share to X
-              </TwitterShareButton>
-              <TelegramShareButton url={`https://theeasy.news/articles/${a.id}`}> 
-                Telegram
-              </TelegramShareButton>
-              <LinkedinShareButton url={`https://theeasy.news/articles/${a.id}`}> 
-                LinkedIn
-              </LinkedinShareButton>
+              <FacebookShareButton url={`${window.location.origin}/articles/${a.id}`}>Share to Facebook</FacebookShareButton>
+              <TwitterShareButton url={`${window.location.origin}/articles/${a.id}`}>Share to X</TwitterShareButton>
+              <TelegramShareButton url={`${window.location.origin}/articles/${a.id}`}>Telegram</TelegramShareButton>
+              <LinkedinShareButton url={`${window.location.origin}/articles/${a.id}`}>LinkedIn</LinkedinShareButton>
             </div>
           </li>
         ))}
