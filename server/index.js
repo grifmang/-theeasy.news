@@ -85,9 +85,26 @@ app.post('/api/register', (req, res) => {
 });
 
 app.get('/api/articles', (req, res) => {
-  const stmt = db.prepare('SELECT * FROM articles ORDER BY created_at DESC');
-  const articles = stmt.all();
+  const { category } = req.query;
+  let articles;
+  if (category) {
+    const stmt = db.prepare(
+      'SELECT * FROM articles WHERE category = ? ORDER BY created_at DESC'
+    );
+    articles = stmt.all(category);
+  } else {
+    const stmt = db.prepare('SELECT * FROM articles ORDER BY created_at DESC');
+    articles = stmt.all();
+  }
   res.json({ articles });
+});
+
+app.get('/api/categories', (req, res) => {
+  const rows = db
+    .prepare('SELECT DISTINCT category FROM articles WHERE category IS NOT NULL')
+    .all();
+  const categories = rows.map(r => r.category).filter(Boolean);
+  res.json({ categories });
 });
 
 app.post('/api/articles', (req, res) => {

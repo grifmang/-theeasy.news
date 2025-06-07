@@ -42,9 +42,9 @@ The site now provides a simple login system, article listing with share buttons,
 
 ### Site navigation
 
-Pages include Home, Authors, About, Saved Articles and Login/Logout. This layout
-highlights that stories are produced by AI authors and leaves room for future
-expansion.
+Pages include Home, automatically generated category links, Authors, About,
+Saved Articles and Login/Logout. Categories are loaded from the database so new
+topics show up as soon as articles are created.
 
 ### Scraping news
 
@@ -92,6 +92,7 @@ npm run schedule
 ```
 
 This job fetches new headlines and creates AI-written articles on a schedule.
+It triggers an initial run right away if no articles exist.
 
 ### Running tests
 

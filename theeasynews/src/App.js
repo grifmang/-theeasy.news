@@ -4,6 +4,7 @@ import Authors from './components/Authors';
 import About from './components/About';
 import Login from './components/Login';
 import Articles from './components/Articles';
+import CategoryArticles from './components/CategoryArticles';
 import SavedArticles from './components/SavedArticles';
 import NavBar from './components/NavBar';
 
@@ -20,6 +21,7 @@ function App() {
       <NavBar userId={userId} onLogout={handleLogout} />
       <Routes>
         <Route path="/" element={<Articles userId={userId} />} />
+        <Route path="/category/:name" element={<CategoryArticles userId={userId} />} />
         <Route path="/login" element={<Login onLogin={setUserId} />} />
         <Route path="/saved" element={<SavedArticles userId={userId} />} />
         <Route path="/authors" element={<Authors />} />
