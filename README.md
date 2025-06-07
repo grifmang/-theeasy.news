@@ -40,6 +40,12 @@ backend API using that `REACT_APP_API_URL` value.
 
 The site now provides a simple login system, article listing with share buttons, and a page for viewing saved articles. New users can register from the login page. Articles can be saved after logging in and shared to social networks including Facebook, X/Twitter, Telegram and LinkedIn. User passwords are hashed with `bcryptjs` before being stored in the database.
 
+### Site navigation
+
+Pages include Home, Authors, About, Saved Articles and Login/Logout. This layout
+highlights that stories are produced by AI authors and leaves room for future
+expansion.
+
 ### Scraping news
 
 To fetch headlines from the New York Times RSS feed into the local database run:
