@@ -12,7 +12,11 @@ The application will consist of three main parts:
 
 A lightweight SQLite database stores user accounts, AI author prompts,
 scraped headlines and generated articles. This keeps the prototype simple
-and avoids the need for external infrastructure.
+and avoids the need for external infrastructure. All backend scripts
+under `/server` read a `DB_PATH` environment variable to locate the
+SQLite file (default `data.db`) and create the directory if needed.
+Moving to a PostgreSQL database is planned for production but has not
+yet been implemented.
 
 ## Database Schema
 
@@ -53,11 +57,18 @@ CREATE TABLE saved_articles (
 
 ## Scraper Service
 
-A background worker fetches articles from popular news outlets. It categorizes each piece by genre and stores the raw content in `source_articles`. The worker can be implemented using Node.js or Python with libraries such as `puppeteer` or `newspaper3k` for scraping. Deduplication ensures the same article is not processed multiple times.
+A background worker fetches articles from popular news outlets and inserts them
+into the `articles` table with `author` set to `RSS`. Each row records the
+source site and category. The implementation uses Node.js and the `rss-parser`
+library, and deduplication ensures the same headline is not stored twice.
 
 ## AI Author Service
 
-Each AI author has a `persona_prompt` describing the author's style and interests. The service composes prompts by combining the persona text with the source article. Using an LLM API (e.g., OpenAI), it generates a new article which is stored in `generated_articles`. Persisting the persona prompt allows consistent style across subsequent generations.
+Each AI author has a `persona` and a `prompt` describing the style. The
+generator reads rows where the `author` column is `RSS`, sends the article title
+to the LLM and updates the same row with the generated `content` and the chosen
+author's name. Storing the persona details in the `authors` table keeps the
+style consistent for future generations.
 
 ## Web Application
 
