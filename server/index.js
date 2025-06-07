@@ -99,6 +99,16 @@ app.get('/api/articles', (req, res) => {
   res.json({ articles });
 });
 
+app.get('/api/articles/:id', (req, res) => {
+  const { id } = req.params;
+  const stmt = db.prepare('SELECT * FROM articles WHERE id = ?');
+  const article = stmt.get(id);
+  if (!article) {
+    return res.status(404).json({ error: 'Article not found' });
+  }
+  res.json({ article });
+});
+
 app.get('/api/categories', (req, res) => {
   const rows = db
     .prepare('SELECT DISTINCT category FROM articles WHERE category IS NOT NULL')
