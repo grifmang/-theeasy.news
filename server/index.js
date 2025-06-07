@@ -3,8 +3,11 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 const dbPath = process.env.DB_PATH || 'data.db';
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
 db.exec(`CREATE TABLE IF NOT EXISTS users (

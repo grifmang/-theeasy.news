@@ -1,8 +1,11 @@
 const Parser = require('rss-parser');
 const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
 
 const parser = new Parser();
 const dbPath = process.env.DB_PATH || 'data.db';
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
 async function scrape() {

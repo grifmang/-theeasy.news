@@ -1,7 +1,10 @@
 const { Configuration, OpenAIApi } = require('openai');
 const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
 
 const dbPath = process.env.DB_PATH || 'data.db';
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
 const configuration = new Configuration({ apiKey: process.env.OPENAI_API_KEY });
