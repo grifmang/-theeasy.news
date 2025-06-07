@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 const Authors = () => {
   const [authors, setAuthors] = useState([]);
-  const API = process.env.REACT_APP_API_URL;
+  const API = process.env.REACT_APP_API_URL || '';
 
   useEffect(() => {
     fetch(`${API}/api/authors`)

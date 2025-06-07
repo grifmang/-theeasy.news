@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const NavBar = ({ userId, onLogout }) => {
   const [categories, setCategories] = useState([]);
-  const API = process.env.REACT_APP_API_URL;
+  const API = process.env.REACT_APP_API_URL || '';
 
   useEffect(() => {
     fetch(`${API}/api/categories`)
