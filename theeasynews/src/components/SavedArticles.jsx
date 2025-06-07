@@ -7,7 +7,7 @@ const SavedArticles = ({ userId }) => {
     fetch(`${API}/api/user/${userId}/saved`)
       .then(res => res.json())
       .then(data => setArticles(data.articles || []));
-  }, [userId]);
+  }, [userId, API]);
 
   return (
     <div>
