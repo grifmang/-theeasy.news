@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import ArticleItem from './ArticleItem';
 const ArticleList = ({ userId }) => {
   const [articles, setArticles] = useState([]);
+  const API = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/articles')
+    fetch(`${API}/api/articles`)
       .then(res => res.json())
       .then(setArticles)
       .catch(() => setArticles([]));
-  }, []);
+  }, [API]);
 
   return (
     <div>

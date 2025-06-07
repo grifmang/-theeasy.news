@@ -3,10 +3,11 @@ import { FacebookShareButton, FacebookIcon, TwitterShareButton, TwitterIcon } fr
 
 const ArticleItem = ({ article, userId, onSaved }) => {
   const shareUrl = window.location.href;
+  const API = process.env.REACT_APP_API_URL;
 
   const save = () => {
     if (!userId) return;
-    fetch('http://localhost:5000/api/save', {
+    fetch(`${API}/api/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, articleId: article.id })
