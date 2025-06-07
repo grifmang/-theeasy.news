@@ -17,8 +17,8 @@ const ArticleItem = ({ article, userId, onSaved }) => {
   };
 
   return (
-    <li>
-      <h3>{article.title}</h3>
+    <li className="article-item">
+      <h3 className="article-title">{article.title}</h3>
       <p>{article.body}</p>
       {userId && <button onClick={save}>Save</button>}
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
