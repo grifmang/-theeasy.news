@@ -14,7 +14,8 @@ const NavBar = ({ userId, onLogout }) => (
       ) : (
         <Link to="/login">Login</Link>
       )}
-      <Link to="/bluesky">Bluesky</Link>
+      <Link to="/authors">Authors</Link>
+      <Link to="/about">About</Link>
     </div>
   </nav>
 );
