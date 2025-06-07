@@ -48,14 +48,15 @@ expansion.
 
 ### Scraping news
 
-To fetch headlines from the New York Times RSS feed into the local database run:
+To fetch headlines from several major outlets into the local database run:
 
 ```bash
 cd server
 npm run scrape
 ```
 
-This inserts the latest headlines as articles that can later be expanded into AI-written pieces.
+This inserts the latest headlines from CNN, the Associated Press, Fox News and NPR. The
+articles can later be expanded into AI-written pieces.
 
 ### Seeding author personas
 
@@ -80,6 +81,17 @@ npm run generate
 
 Each run picks a random author persona and prompt from the `authors` table
 and updates scraped articles with AI-written content.
+
+### Automated generation
+
+To continuously scrape and generate content every hour run:
+
+```bash
+cd server
+npm run schedule
+```
+
+This job fetches new headlines and creates AI-written articles on a schedule.
 
 ### Running tests
 

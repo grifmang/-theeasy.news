@@ -17,14 +17,23 @@ async function generateArticles() {
     console.error('No authors defined');
     return;
   }
+
+  const pickAuthor = (category) => {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('sport')) return authors.find(a => a.name.includes('Sports')) || authors[0];
+    if (cat.includes('politic')) return authors.find(a => a.name.includes('Politics')) || authors[0];
+    if (cat.includes('tech') || cat.includes('sci')) return authors.find(a => a.name.includes('AI')) || authors[0];
+    return authors[Math.floor(Math.random() * authors.length)];
+  };
+
   for (const article of articles) {
-    const author = authors[Math.floor(Math.random() * authors.length)];
+    const author = pickAuthor(article.category);
     const systemPrompt = `${author.persona}\n${author.prompt}`;
     const messages = [
       { role: 'system', content: systemPrompt },
       {
         role: 'user',
-        content: `Write a full news article based on the headline: "${article.title}"`,
+        content: `Write a full news article summarizing: "${article.title}"`,
       },
     ];
     try {
@@ -41,4 +50,8 @@ async function generateArticles() {
   }
 }
 
-generateArticles();
+module.exports = { generateArticles };
+
+if (require.main === module) {
+  generateArticles();
+}
