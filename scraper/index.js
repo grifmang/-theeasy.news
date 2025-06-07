@@ -1,6 +1,7 @@
 const axios = require('axios');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const API_KEY = process.env.NEWS_API_KEY;
 if (!API_KEY) {
@@ -9,6 +10,7 @@ if (!API_KEY) {
 }
 
 const DB_PATH = path.join(__dirname, '../server/data.db');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new sqlite3.Database(DB_PATH);
 
 async function fetchArticles() {
