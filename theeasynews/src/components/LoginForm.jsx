@@ -4,10 +4,11 @@ const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const API = process.env.REACT_APP_API_URL;
 
   const submit = e => {
     e.preventDefault();
-    fetch('http://localhost:5000/api/login', {
+    fetch(`${API}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
