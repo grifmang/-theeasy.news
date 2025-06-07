@@ -10,54 +10,44 @@ The application will consist of three main parts:
 2. **AI Author Service** – generates new articles from scraped data while maintaining consistent author profiles.
 3. **Web Application** – allows readers to browse, save, and share generated articles.
 
-A PostgreSQL database stores user accounts, AI author prompts, source articles, and generated content.
+A lightweight SQLite database stores user accounts, AI author prompts,
+scraped headlines and generated articles. This keeps the prototype simple
+and avoids the need for external infrastructure.
 
 ## Database Schema
 
 ```sql
 -- users table
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    display_name TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL
 );
 
--- ai_authors table
-CREATE TABLE ai_authors (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    persona_prompt TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- authors table
+CREATE TABLE authors (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE NOT NULL,
+  persona TEXT NOT NULL,
+  prompt TEXT NOT NULL
 );
 
--- source_articles table
-CREATE TABLE source_articles (
-    id SERIAL PRIMARY KEY,
-    url TEXT UNIQUE NOT NULL,
-    title TEXT,
-    content TEXT,
-    published_at TIMESTAMP,
-    genre TEXT
+-- articles table
+CREATE TABLE articles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  author TEXT NOT NULL,
+  source TEXT,
+  category TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- generated_articles table
-CREATE TABLE generated_articles (
-    id SERIAL PRIMARY KEY,
-    ai_author_id INTEGER REFERENCES ai_authors(id),
-    source_article_id INTEGER REFERENCES source_articles(id),
-    title TEXT,
-    body TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- saved_articles table
+-- saved articles linking users and articles
 CREATE TABLE saved_articles (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    article_id INTEGER REFERENCES generated_articles(id),
-    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  user_id INTEGER,
+  article_id INTEGER,
+  PRIMARY KEY (user_id, article_id)
 );
 ```
 
@@ -82,5 +72,5 @@ The React front end communicates with a small Node.js or Express backend. Key fe
 
 ## Deployment
 
-The project can be deployed to platforms such as Netlify (for the front end) and a managed PostgreSQL provider or Docker container (for the API and scraper services). Scheduled jobs trigger scraping and article generation regularly.
+The project can be deployed to platforms such as Netlify (for the front end) and a small Node host like Railway for the API and background jobs. Because SQLite is used, the database can simply reside on a persistent volume. Scheduled jobs trigger scraping and article generation regularly.
 

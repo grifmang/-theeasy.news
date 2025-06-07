@@ -30,7 +30,7 @@ const Articles = ({ userId }) => {
             <p>{a.content}</p>
             <small className="article-author">By {a.author}</small>
             {userId && <button onClick={() => save(a.id)}>Save</button>}
-            <div>
+            <div className="share-buttons">
               <FacebookShareButton url={`https://theeasy.news/articles/${a.id}`}> 
                 Share to Facebook
               </FacebookShareButton>
