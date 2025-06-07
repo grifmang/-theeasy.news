@@ -94,7 +94,8 @@ React Router is used in the frontend tests so dependencies must be installed wit
    - `PORT` (if different from `4000`)
    - `DB_PATH` – path to the SQLite file (e.g. `/data/data.db` on a persistent volume)
    - `OPENAI_API_KEY` for article generation
-3. Railway will run `npm start` from the `server/` directory to launch the Express app.
+3. Railway runs `npm start` from the repository root. The root `package.json`
+   installs dependencies under `server/` and launches the Express app.
 
 ### Frontend on Netlify
 
