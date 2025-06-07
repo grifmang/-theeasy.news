@@ -38,7 +38,7 @@ This repository contains a small prototype for **The Easy News**, a web applicat
 The frontend is served at `http://localhost:3000` and communicates with the
 backend API using that `REACT_APP_API_URL` value.
 
-The site now provides a simple login system, article listing with share buttons, and a page for viewing saved articles. New users can register from the login page. Articles can be saved after logging in and shared to social networks including Facebook, X/Twitter, Telegram and LinkedIn.
+The site now provides a simple login system, article listing with share buttons, and a page for viewing saved articles. New users can register from the login page. Articles can be saved after logging in and shared to social networks including Facebook, X/Twitter, Telegram and LinkedIn. User passwords are hashed with `bcryptjs` before being stored in the database.
 
 ### Scraping news
 

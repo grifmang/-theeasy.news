@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
+const bcrypt = require('bcryptjs');
 
 const dbPath = process.env.DB_PATH || 'data.db';
 const db = new Database(dbPath);
@@ -46,9 +47,9 @@ app.post('/api/login', (req, res) => {
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
-  const stmt = db.prepare('SELECT * FROM users WHERE username=? AND password=?');
-  const user = stmt.get(username, password);
-  if (!user) {
+  const stmt = db.prepare('SELECT * FROM users WHERE username=?');
+  const user = stmt.get(username);
+  if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   res.json({ message: 'Logged in', userId: user.id });
@@ -60,8 +61,9 @@ app.post('/api/register', (req, res) => {
     return res.status(400).json({ error: 'Username and password required' });
   }
   try {
+    const hash = bcrypt.hashSync(password, 10);
     const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-    const info = stmt.run(username, password);
+    const info = stmt.run(username, hash);
     res.json({ userId: info.lastInsertRowid });
   } catch (err) {
     res.status(400).json({ error: 'User exists' });
