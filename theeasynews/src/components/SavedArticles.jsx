@@ -10,11 +10,11 @@ const SavedArticles = ({ userId }) => {
   }, [userId, API]);
 
   return (
-    <div>
-      <h1>Saved Articles</h1>
+    <div className="container article-list">
+      <h1 className="page-title">Saved Articles</h1>
       <ul>
         {articles.map(a => (
-          <li key={a.id}>{a.title}</li>
+          <li className="article-item" key={a.id}>{a.title}</li>
         ))}
       </ul>
     </div>

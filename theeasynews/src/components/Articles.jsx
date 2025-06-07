@@ -21,26 +21,26 @@ const Articles = ({ userId }) => {
   };
 
   return (
-    <div>
-      <h1>Articles</h1>
+    <div className="container article-list">
+      <h1 className="page-title">Articles</h1>
       <ul>
         {articles.map(a => (
-          <li key={a.id}>
-            <h3>{a.title}</h3>
+          <li className="article-item" key={a.id}>
+            <h3 className="article-title">{a.title}</h3>
             <p>{a.content}</p>
-            <small>By {a.author}</small>
+            <small className="article-author">By {a.author}</small>
             {userId && <button onClick={() => save(a.id)}>Save</button>}
             <div>
-              <FacebookShareButton url={`https://theeasy.news/articles/${a.id}`}>
+              <FacebookShareButton url={`https://theeasy.news/articles/${a.id}`}> 
                 Share to Facebook
               </FacebookShareButton>
-              <TwitterShareButton url={`https://theeasy.news/articles/${a.id}`}>
+              <TwitterShareButton url={`https://theeasy.news/articles/${a.id}`}> 
                 Share to X
               </TwitterShareButton>
-              <TelegramShareButton url={`https://theeasy.news/articles/${a.id}`}>
+              <TelegramShareButton url={`https://theeasy.news/articles/${a.id}`}> 
                 Telegram
               </TelegramShareButton>
-              <LinkedinShareButton url={`https://theeasy.news/articles/${a.id}`}>
+              <LinkedinShareButton url={`https://theeasy.news/articles/${a.id}`}> 
                 LinkedIn
               </LinkedinShareButton>
             </div>

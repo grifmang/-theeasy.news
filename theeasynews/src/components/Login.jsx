@@ -23,8 +23,8 @@ const Login = ({ onLogin }) => {
     }
   };
   return (
-    <div>
-      <h1>{isRegister ? 'Register' : 'Login'}</h1>
+    <div className="container">
+      <h1 className="page-title">{isRegister ? 'Register' : 'Login'}</h1>
       <form onSubmit={handleSubmit}>
         <input
           placeholder="Username"
