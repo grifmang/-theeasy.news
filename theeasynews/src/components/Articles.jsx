@@ -10,7 +10,7 @@ const Articles = ({ userId }) => {
     fetch(`${API}/api/articles`)
       .then(res => res.json())
       .then(data => setArticles(data.articles || []));
-  }, []);
+  }, [API]);
 
   const save = async (articleId) => {
     await fetch(`${API}/api/save`, {
