@@ -34,6 +34,8 @@ This repository contains a small prototype for **The Easy News**, a web applicat
    npm start
    ```
    Set `REACT_APP_API_URL` in a `.env` file to the URL of your backend.
+   Set `REACT_APP_GOOGLE_CLIENT_ID` to your Google OAuth client ID if you want
+   to enable Google SSO in the frontend.
 
 The frontend is served at `http://localhost:3000` and communicates with the
 backend API using that `REACT_APP_API_URL` value.
@@ -113,6 +115,7 @@ React Router is used in the frontend tests so dependencies must be installed wit
    - `PORT` (if different from `4000`)
    - `DB_PATH` – path to the SQLite file (e.g. `/data/data.db` on a persistent volume)
    - `OPENAI_API_KEY` for article generation
+   - `GOOGLE_CLIENT_ID` for verifying Google sign-in tokens
 3. Railway runs `npm start` from the repository root. The root `package.json`
    installs dependencies under `server/` and launches the Express app.
 
@@ -120,5 +123,6 @@ React Router is used in the frontend tests so dependencies must be installed wit
 
 1. In Netlify, create a new site from this repository and configure the build directory `theeasynews`.
 2. Set the build command to `npm run build` and publish directory to `build` (already defined in `netlify.toml`).
-3. Add an environment variable `REACT_APP_API_URL` pointing to the Railway backend URL.
+3. Add environment variables `REACT_APP_API_URL` and `REACT_APP_GOOGLE_CLIENT_ID`
+   pointing to the Railway backend URL and your Google OAuth client ID.
 4. Deploy – Netlify will build the React app and serve the static files.

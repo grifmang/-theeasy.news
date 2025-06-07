@@ -4,7 +4,7 @@ const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
-  const API = process.env.REACT_APP_API_URL;
+  const API = process.env.REACT_APP_API_URL || '';
 
   const submit = e => {
     e.preventDefault();

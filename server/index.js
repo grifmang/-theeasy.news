@@ -3,12 +3,16 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+const { OAuth2Client } = require('google-auth-library');
 const fs = require('fs');
 const path = require('path');
 
 const dbPath = process.env.DB_PATH || 'data.db';
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const oauthClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
 db.exec(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,6 +85,32 @@ app.post('/api/register', (req, res) => {
     res.json({ userId: info.lastInsertRowid });
   } catch (err) {
     res.status(400).json({ error: 'User exists' });
+  }
+});
+
+app.post('/api/google-login', async (req, res) => {
+  if (!oauthClient) {
+    return res.status(500).json({ error: 'Google login not configured' });
+  }
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ error: 'Token required' });
+  }
+  try {
+    const ticket = await oauthClient.verifyIdToken({ idToken: token, audience: googleClientId });
+    const payload = ticket.getPayload();
+    const email = payload && payload.email;
+    if (!email) {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
+    let user = db.prepare('SELECT * FROM users WHERE username=?').get(email);
+    if (!user) {
+      const info = db.prepare('INSERT INTO users (username, password) VALUES (?, "")').run(email);
+      user = { id: info.lastInsertRowid };
+    }
+    res.json({ userId: user.id });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
   }
 });
 

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState('');
-  const API = process.env.REACT_APP_API_URL;
+  const API = process.env.REACT_APP_API_URL || '';
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isRegister ? '/api/register' : '/api/login';
@@ -46,6 +47,25 @@ const Login = ({ onLogin }) => {
       <button onClick={() => setIsRegister(!isRegister)}>
         {isRegister ? 'Have an account? Login' : 'Need an account? Register'}
       </button>
+      <div style={{ marginTop: '1rem' }}>
+        <GoogleLogin
+          onSuccess={async (cred) => {
+            const res = await fetch(`${API}/api/google-login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: cred.credential })
+            });
+            const data = await res.json();
+            if (res.ok && data.userId) {
+              localStorage.setItem('userId', data.userId);
+              onLogin(data.userId);
+            } else {
+              setError(data.error || 'Google login failed');
+            }
+          }}
+          onError={() => setError('Google login failed')}
+        />
+      </div>
     </div>
   );
 };

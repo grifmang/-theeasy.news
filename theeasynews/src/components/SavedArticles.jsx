@@ -3,7 +3,7 @@ import { FacebookShareButton, TwitterShareButton, TelegramShareButton, LinkedinS
 
 const SavedArticles = ({ userId }) => {
   const [articles, setArticles] = useState([]);
-  const API = process.env.REACT_APP_API_URL;
+  const API = process.env.REACT_APP_API_URL || '';
   useEffect(() => {
     fetch(`${API}/api/user/${userId}/saved`)
       .then(res => res.json())
