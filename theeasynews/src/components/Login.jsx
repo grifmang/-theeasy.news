@@ -4,6 +4,7 @@ const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isRegister, setIsRegister] = useState(false);
+  const [error, setError] = useState('');
   const API = process.env.REACT_APP_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,11 +15,13 @@ const Login = ({ onLogin }) => {
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || 'Unable to authenticate');
+      return;
+    }
     if (data.userId) {
       localStorage.setItem('userId', data.userId);
-      onLogin(data.userId);
-    } else if (data.message && data.userId === undefined && !isRegister) {
-      // login endpoint returns message but we want userId
+      setError('');
       onLogin(data.userId);
     }
   };
@@ -39,6 +42,7 @@ const Login = ({ onLogin }) => {
         />
         <button type="submit">Submit</button>
       </form>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
       <button onClick={() => setIsRegister(!isRegister)}>
         {isRegister ? 'Have an account? Login' : 'Need an account? Register'}
       </button>
