@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS articles (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   author TEXT NOT NULL,
+  source TEXT,
+  category TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS saved_articles (
@@ -39,6 +41,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_title ON articles(title);`);
 const authorCols = db.prepare('PRAGMA table_info(authors)').all();
 if (!authorCols.some(c => c.name === 'persona')) {
   db.exec('ALTER TABLE authors ADD COLUMN persona TEXT DEFAULT ""');
+}
+
+// Ensure newer columns exist on articles table
+const articleCols = db.prepare('PRAGMA table_info(articles)').all();
+if (!articleCols.some(c => c.name === 'source')) {
+  db.exec('ALTER TABLE articles ADD COLUMN source TEXT');
+}
+if (!articleCols.some(c => c.name === 'category')) {
+  db.exec('ALTER TABLE articles ADD COLUMN category TEXT');
 }
 
 const app = express();
@@ -74,9 +85,26 @@ app.post('/api/register', (req, res) => {
 });
 
 app.get('/api/articles', (req, res) => {
-  const stmt = db.prepare('SELECT * FROM articles ORDER BY created_at DESC');
-  const articles = stmt.all();
+  const { category } = req.query;
+  let articles;
+  if (category) {
+    const stmt = db.prepare(
+      'SELECT * FROM articles WHERE category = ? ORDER BY created_at DESC'
+    );
+    articles = stmt.all(category);
+  } else {
+    const stmt = db.prepare('SELECT * FROM articles ORDER BY created_at DESC');
+    articles = stmt.all();
+  }
   res.json({ articles });
+});
+
+app.get('/api/categories', (req, res) => {
+  const rows = db
+    .prepare('SELECT DISTINCT category FROM articles WHERE category IS NOT NULL')
+    .all();
+  const categories = rows.map(r => r.category).filter(Boolean);
+  res.json({ categories });
 });
 
 app.post('/api/articles', (req, res) => {
