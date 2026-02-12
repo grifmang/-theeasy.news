@@ -1,14 +1,18 @@
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
+
+if (!process.env.OPENAI_API_KEY) {
+  console.error('OPENAI_API_KEY environment variable is required');
+  process.exit(1);
+}
 
 const dbPath = process.env.DB_PATH || 'data.db';
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
-const configuration = new Configuration({ apiKey: process.env.OPENAI_API_KEY });
-const openai = new OpenAIApi(configuration);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function generateArticles() {
   const articles = db.prepare('SELECT * FROM articles WHERE author = "RSS"').all();
@@ -37,11 +41,11 @@ async function generateArticles() {
       },
     ];
     try {
-      const resp = await openai.createChatCompletion({
-        model: 'gpt-3.5-turbo',
+      const resp = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
         messages,
       });
-      const text = resp.data.choices[0].message.content.trim();
+      const text = resp.choices[0].message.content.trim();
       db.prepare('UPDATE articles SET content=?, author=? WHERE id=?').run(text, author.name, article.id);
       console.log('Generated article', article.id);
     } catch (err) {

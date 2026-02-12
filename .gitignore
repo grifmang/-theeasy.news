@@ -1,3 +1,7 @@
 /theeasynews/node_modules
 /server/node_modules
 /server/data.db
+nul
+server/.env.example
+theeasynews/.env.example
+.claude/settings.local.json

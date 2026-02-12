@@ -3,6 +3,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
 const fs = require('fs');
 const path = require('path');
@@ -12,6 +14,9 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
+if (!googleClientId) {
+  console.warn('WARNING: GOOGLE_CLIENT_ID is not set. Google login will be disabled.');
+}
 const oauthClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
 db.exec(`CREATE TABLE IF NOT EXISTS users (
@@ -56,11 +61,50 @@ if (!articleCols.some(c => c.name === 'category')) {
   db.exec('ALTER TABLE articles ADD COLUMN category TEXT');
 }
 
+// --- Session token store ---
+const sessions = new Map();
+
+function createSession(userId, username) {
+  const token = crypto.randomUUID();
+  sessions.set(token, { userId, username });
+  return token;
+}
+
+// --- Auth middleware ---
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  const token = authHeader.slice(7);
+  const session = sessions.get(token);
+  if (!session) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+  req.userId = session.userId;
+  next();
+}
+
 const app = express();
-app.use(cors());
+
+// --- CORS ---
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
+
 app.use(bodyParser.json());
 
-app.post('/api/login', (req, res) => {
+// --- Rate limiting ---
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later' } });
+app.use('/api/', limiter);
+
+app.post('/api/login', authLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
@@ -70,25 +114,30 @@ app.post('/api/login', (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
-  res.json({ message: 'Logged in', userId: user.id });
+  const token = createSession(user.id, user.username);
+  res.json({ message: 'Logged in', userId: user.id, username: user.username, token });
 });
 
-app.post('/api/register', (req, res) => {
+app.post('/api/register', authLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
   try {
     const hash = bcrypt.hashSync(password, 10);
     const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
     const info = stmt.run(username, hash);
-    res.json({ userId: info.lastInsertRowid });
+    const token = createSession(Number(info.lastInsertRowid), username);
+    res.json({ userId: info.lastInsertRowid, username, token });
   } catch (err) {
     res.status(400).json({ error: 'User exists' });
   }
 });
 
-app.post('/api/google-login', async (req, res) => {
+app.post('/api/google-login', authLimiter, async (req, res) => {
   if (!oauthClient) {
     return res.status(500).json({ error: 'Google login not configured' });
   }
@@ -106,27 +155,50 @@ app.post('/api/google-login', async (req, res) => {
     let user = db.prepare('SELECT * FROM users WHERE username=?').get(email);
     if (!user) {
       const info = db.prepare('INSERT INTO users (username, password) VALUES (?, "")').run(email);
-      user = { id: info.lastInsertRowid };
+      user = { id: Number(info.lastInsertRowid), username: email };
     }
-    res.json({ userId: user.id });
+    const sessionToken = createSession(user.id, user.username || email);
+    res.json({ userId: user.id, username: user.username || email, token: sessionToken });
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
 
 app.get('/api/articles', (req, res) => {
-  const { category } = req.query;
+  const { category, search, page: pageParam, limit: limitParam } = req.query;
+  const page = Math.max(1, parseInt(pageParam, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(limitParam, 10) || 12));
+  const offset = (page - 1) * limit;
+
   let articles;
-  if (category) {
-    const stmt = db.prepare(
-      'SELECT * FROM articles WHERE category = ? ORDER BY created_at DESC'
-    );
-    articles = stmt.all(category);
+  let total;
+
+  if (search) {
+    const pattern = `%${search}%`;
+    total = db.prepare(
+      'SELECT COUNT(*) as count FROM articles WHERE (title LIKE ? OR content LIKE ?) AND author != "RSS"'
+    ).get(pattern, pattern).count;
+    articles = db.prepare(
+      'SELECT * FROM articles WHERE (title LIKE ? OR content LIKE ?) AND author != "RSS" ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(pattern, pattern, limit, offset);
+  } else if (category) {
+    total = db.prepare(
+      'SELECT COUNT(*) as count FROM articles WHERE category = ? AND author != "RSS"'
+    ).get(category).count;
+    articles = db.prepare(
+      'SELECT * FROM articles WHERE category = ? AND author != "RSS" ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(category, limit, offset);
   } else {
-    const stmt = db.prepare('SELECT * FROM articles ORDER BY created_at DESC');
-    articles = stmt.all();
+    total = db.prepare(
+      'SELECT COUNT(*) as count FROM articles WHERE author != "RSS"'
+    ).get().count;
+    articles = db.prepare(
+      'SELECT * FROM articles WHERE author != "RSS" ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(limit, offset);
   }
-  res.json({ articles });
+
+  const totalPages = Math.ceil(total / limit);
+  res.json({ articles, total, page, totalPages });
 });
 
 app.get('/api/articles/:id', (req, res) => {
@@ -147,7 +219,7 @@ app.get('/api/categories', (req, res) => {
   res.json({ categories });
 });
 
-app.post('/api/articles', (req, res) => {
+app.post('/api/articles', authMiddleware, (req, res) => {
   const { title, content, author } = req.body;
   if (!title || !content || !author) {
     return res.status(400).json({ error: 'Missing fields' });
@@ -157,9 +229,10 @@ app.post('/api/articles', (req, res) => {
   res.json({ articleId: info.lastInsertRowid });
 });
 
-app.post('/api/save', (req, res) => {
-  const { userId, articleId } = req.body;
-  if (!userId || !articleId) {
+app.post('/api/save', authMiddleware, (req, res) => {
+  const { articleId } = req.body;
+  const userId = req.userId;
+  if (!articleId) {
     return res.status(400).json({ error: 'Missing fields' });
   }
   const stmt = db.prepare('INSERT OR IGNORE INTO saved_articles (user_id, article_id) VALUES (?, ?)');
@@ -167,7 +240,7 @@ app.post('/api/save', (req, res) => {
   res.json({ message: 'Saved' });
 });
 
-app.get('/api/user/:userId/saved', (req, res) => {
+app.get('/api/user/:userId/saved', authMiddleware, (req, res) => {
   const { userId } = req.params;
   const stmt = db.prepare(
     `SELECT articles.* FROM articles JOIN saved_articles ON articles.id = saved_articles.article_id WHERE saved_articles.user_id = ?`
@@ -176,7 +249,7 @@ app.get('/api/user/:userId/saved', (req, res) => {
   res.json({ articles: saved });
 });
 
-app.post('/api/authors', (req, res) => {
+app.post('/api/authors', authMiddleware, (req, res) => {
   const { name, persona, prompt } = req.body;
   if (!name || !persona || !prompt) {
     return res.status(400).json({ error: 'Missing fields' });
