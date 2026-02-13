@@ -88,7 +88,7 @@ function authMiddleware(req, res, next) {
 const app = express();
 
 // --- CORS ---
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://theeasy.news,http://localhost:3000').split(',');
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
