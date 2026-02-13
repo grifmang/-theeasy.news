@@ -2,7 +2,7 @@
   "name": "theeasynews-root",
   "private": true,
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "postinstall": "npm install --prefix server",
