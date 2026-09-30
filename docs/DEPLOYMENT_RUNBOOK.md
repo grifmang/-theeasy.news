@@ -1,5 +1,26 @@
 # Later rebuild: deployment and recovery runbook
 
+## Current local boundary — Task18, 2026-09-30
+
+Local runtime is schema34; deployed Railway remains schema21. Task18's public
+bookmarks, bounded authenticated review detail, exact-generation public
+correction chronology, Corrections UI, and citation navigation are local
+implementation only. Do not describe this as completed staging or enable a
+production public cutover. The bookmarks write path checks session, origin,
+CSRF, and current public admission; saved reads recheck admission and hide
+withdrawn content. Correction chronology is sanitized and cursor-paginated,
+with exact installed-generation proof at four targets and independent latest
+correction discovery. Cost attribution is unavailable.
+
+The local verification record is in [RESUME](RESUME.md) and
+[AGENT_WORKLOG](AGENT_WORKLOG.md). Remaining release gates include real
+exporter staging, browser accessibility and E2E, fresh restore, and hosted CI
+for schema34. Hosted run 36660112527 certifies only commit `090278c`; it does
+not certify current head. No production DB/model/provider calls or deployment
+were part of Task18. Keep the coordinated backup-first schema21 migration and
+all existing recovery, sink ownership/durability, coverage, accuracy, and
+approval gates in force.
+
 Updated 2026-09-20. The research frontend and backend have been deployed;
 this is not completion of the production release gates. The owner approved
 reuse of paid Netlify and Railway Hobby, a fresh database and persistent volume,

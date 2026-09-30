@@ -1904,3 +1904,31 @@ Verification: backend 58/58 suites (546 passed, 1 skipped); frontend 6/6 suites
 (41 tests); lint, public-config, build, and `git diff --check` passed. No
 Railway/Netlify deployment occurred. Production remains schema21; local schema
 is 33. Broader release, deployed-browser, accessibility, and E2E gates remain.
+
+## 2026-09-30 — Task18 public bookmarks, review detail, and corrections
+
+Commits `63022ce`, `8675bcd`, and `9b2038c` complete the local schema34
+Task18 slice. Additive public bookmarks use session, origin, and CSRF checks,
+and writes require current public admission. Saved reads recheck admission and
+hide withdrawn material. Authenticated bounded review queue/history and
+claim-scoped ReviewDetail show saved draft, evidence, and original/extraction
+comparison. Sanitized public correction chronology proves exact-generation
+installation across four targets, paginates with cursors, and independently
+discovers the latest correction. The public Corrections UI and focusable,
+returnable citations are implemented.
+
+All five Important findings in the Task18 review fix round were addressed. A
+bounded Astra audit found no P0/P1; its P2 (owner retraction unavailable after
+evidence/report failure) was fixed and re-reviewed clean. Retraction is an
+independent owner action; review, publish, and correct still fail closed when
+evidence/report checks fail.
+
+Verification: backend 58/58 suites, 546 passed/1 skipped; frontend 6/6 suites,
+41 tests; lint, config boundary, build, syntax, and diff checks passed. The
+disposable 130-generation/22-claim probe passed uninstalled exclusion,
+pagination, latest correction, and tombstone hiding. No new unit tests, live
+provider/model calls, production DB use, or deployment. Cost attribution is
+explicitly unavailable; chronology is cursor-paginated, not complete in one
+response. Local is schema34 and Railway schema21. Real exporter staging,
+browser accessibility/E2E, fresh restore, and hosted CI for schema34 remain
+open. Hosted run 36660112527 proves only `090278c`, not current head.

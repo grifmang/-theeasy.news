@@ -1,4 +1,31 @@
-# Resume checkpoint — 2026-09-29
+# Resume checkpoint — 2026-09-30
+
+## Task18 local public bookmarks, review, and corrections — 2026-09-30
+
+Commits `63022ce`, `8675bcd`, and `9b2038c` complete the local Task18 slice
+on schema34. Additive public bookmarks use session/origin/CSRF checks and
+current-public-admission checks on writes; saved reads recheck admission and
+hide withdrawn content. The authenticated bounded review queue and history
+provide claim-scoped ReviewDetail with saved draft, evidence, and original vs.
+extraction comparison. Public correction chronology is sanitized, tied to the
+exact generation installed at all four targets, cursor-paginated, and discovers
+latest corrections independently. The public Corrections UI and focusable,
+returnable citations are present. Owner retraction remains available when
+evidence/report retrieval fails; review, publish, and correction fail closed.
+The review fix round addressed all five Important findings. Bounded Astra audit
+found no P0/P1; its one P2 was fixed and re-reviewed clean.
+
+Verification: backend 58/58 suites (546 passed, 1 skipped); frontend 6/6
+suites (41 tests); lint, public-config, build, syntax, and diff checks passed.
+A disposable 130-generation/22-claim probe passed uninstalled exclusion,
+pagination, latest-correction discovery, and tombstone hiding. No unit tests
+were added under owner policy. Cost attribution is explicitly unavailable, and
+chronology is paginated rather than asserted complete. No production DB, model
+or provider call, or deployment was used. Local runtime is schema34; Railway
+remains schema21. Real exporter staging, browser accessibility/E2E, fresh
+restore, and hosted CI for schema34 remain open. Hosted run 36660112527 certifies
+only `090278c`, not current head. Do not treat this local slice as staging
+completion or deployment approval.
 
 ## Task17 topic browse API and Task18 public reader/review UI — 2026-09-30
 
