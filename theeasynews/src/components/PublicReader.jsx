@@ -42,6 +42,15 @@ export function LimitationsPanel({ limitations }) {
   </aside>;
 }
 
+export function PublicationChronology({events=[]}){
+  return <section className="limitations-panel" aria-label="Publication and correction chronology">
+    <h2>Publication and correction history</h2>
+    {events.length?<ol>{events.map((event,index)=><li key={`${event.type}-${event.occurredAtMs}-${index}`}>
+      {event.type==='correction'?'Correction':'Publication'} · <time dateTime={new Date(event.occurredAtMs).toISOString()}>{new Date(event.occurredAtMs).toLocaleDateString()}</time>
+    </li>)}</ol>:<p>Publication date unavailable.</p>}
+  </section>;
+}
+
 export function LegacyArticleUnavailable() {
   return <div className="public-reader"><div className="reader-narrow reader-state">
     <p className="eyebrow">The Easy News public library</p><h1>Legacy article unavailable</h1>

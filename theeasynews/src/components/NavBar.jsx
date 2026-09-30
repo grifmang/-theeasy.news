@@ -6,7 +6,7 @@ const NavBar = ({ userId, onLogout }) => {
   const location = useLocation();
   const readerPath = location.pathname === '/' || location.pathname.startsWith('/topics/') ||
     location.pathname.startsWith('/claims/') || location.pathname.startsWith('/analyses/') ||
-    location.pathname.startsWith('/articles/') || location.pathname === '/saved';
+    location.pathname.startsWith('/articles/') || location.pathname === '/saved' || location.pathname === '/corrections';
 
   useEffect(() => {
     setMenuOpen(false);
@@ -27,10 +27,12 @@ const NavBar = ({ userId, onLogout }) => {
       </button>
       <div className={`nav-links${menuOpen ? ' open' : ''}`}>
         <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Public research</Link>
+        <Link to="/corrections" className={location.pathname === '/corrections' ? 'active' : ''}>Corrections</Link>
         {userId ? (
           <>
             <Link to="/saved" className={location.pathname === '/saved' ? 'active' : ''}>Saved</Link>
             <Link to="/editor" className={location.pathname === '/editor' ? 'active' : ''}>Research desk</Link>
+            <Link to="/editor/reviews" className={location.pathname.startsWith('/editor/reviews') ? 'active' : ''}>Review queue</Link>
             <button className="btn-logout" onClick={onLogout}>Logout</button>
           </>
         ) : (

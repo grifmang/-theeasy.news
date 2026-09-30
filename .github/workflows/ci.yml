@@ -165,7 +165,7 @@ jobs:
               const integrity=db.pragma("integrity_check",{simple:true});
               const foreignKeys=db.pragma("foreign_key_check").length;
               db.close();
-              if(version!==33||integrity!=="ok"||foreignKeys!==0)process.exit(2);'
+              if(version!==require("./storage").SCHEMA_VERSION||integrity!=="ok"||foreignKeys!==0)process.exit(2);'
 
       - name: Existing native sandbox adversarial checks
         env:

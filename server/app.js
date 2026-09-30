@@ -103,7 +103,7 @@ app.use('/api/v1/editor',authMiddleware,requireEditor,(req,res,next)=>{
   pdfExtraction:services.pdfExtraction,budgetGuard:services.budgetGuard,budgetLimits:services.budgetLimits||{
   dailyMicros:config.dailyBudgetMicros??0,monthlyMicros:config.monthlyBudgetMicros??0},clock:services.clock||Date.now}));
 const publicRoutes=require('./routes/public');
-app.use(['/api/v1/topics','/api/v1/claims','/api/v1/analyses','/api/v1/search'],(req,res,next)=>{
+app.use(['/api/v1/topics','/api/v1/claims','/api/v1/analyses','/api/v1/search','/api/v1/corrections'],(req,res,next)=>{
   if(!['GET','HEAD'].includes(req.method))return next();
   try{
     if(config.publicReadEnabled&&services.publicReadAdmission?.isAvailable())return next();
@@ -112,11 +112,55 @@ app.use(['/api/v1/topics','/api/v1/claims','/api/v1/analyses','/api/v1/search'],
   return res.status(503).json({error:'public_read_unavailable'});
 });
 app.use('/api/v1',publicRoutes.createPublicRouter(db));
-app.get('/api/v1/me/saved',authMiddleware,(req,res)=>{
+function bookmarkAdmission(req,res,next){
+  try {if(config.publicReadEnabled&&services.publicReadAdmission?.isAvailable())return next();}catch{}
+  return res.status(503).json({error:'public_read_unavailable'});
+}
+function bookmarkId(value){
+  return typeof value==='string'&&/^[1-9]\d*$/.test(value)&&Number.isSafeInteger(Number(value))?Number(value):null;
+}
+app.use('/api/v1/me/saved',authMiddleware,bookmarkAdmission,ordinaryJson,editorInputError);
+app.get('/api/v1/me/saved',(req,res)=>{
   res.set('Cache-Control',publicRoutes.PRIVATE_CACHE);
-  // Legacy saved_articles references unreviewed article rows. There is no
-  // reviewed bookmark migration to the publication manifest yet.
-  res.json({items:[]});
+  const after=req.query.after===undefined?Number.MAX_SAFE_INTEGER:bookmarkId(req.query.after);
+  if(!after||Object.keys(req.query).some(key=>key!=='after'))
+    return res.status(400).json({error:'Invalid bookmark cursor'});
+  const rows=db.prepare(`SELECT claim_id FROM public_analysis_bookmarks WHERE user_id=? AND claim_id<?
+    ORDER BY claim_id DESC LIMIT 50`).all(req.userId,after);
+  const items=rows.map(row=>publicRoutes.visibleAnalysis(db,row.claim_id)?.dto).filter(Boolean)
+    .map(dto=>({claimId:dto.claimId,title:dto.title,analysisSlug:`analysis-${dto.analysisVersionId}`}));
+  res.json({items,nextAfter:rows.length===50?rows.at(-1).claim_id:null});
+});
+app.get('/api/v1/me/saved/:claimId',(req,res)=>{
+  res.set('Cache-Control',publicRoutes.PRIVATE_CACHE);
+  const claimId=bookmarkId(req.params.claimId);
+  if(!claimId)return res.status(400).json({error:'Invalid bookmark request'});
+  const exists=db.prepare('SELECT 1 FROM public_analysis_bookmarks WHERE user_id=? AND claim_id=?')
+    .get(req.userId,claimId);
+  const saved=Boolean(exists&&publicRoutes.visibleAnalysis(db,claimId));
+  return res.json({saved,claimId});
+});
+app.post('/api/v1/me/saved',(req,res)=>{
+  res.set('Cache-Control',publicRoutes.PRIVATE_CACHE);
+  if(!req.body||Object.keys(req.body).length!==1||!Object.hasOwn(req.body,'claimId')||
+    !Number.isSafeInteger(req.body.claimId)||req.body.claimId<=0)
+    return res.status(400).json({error:'Invalid bookmark request'});
+  const saved=db.transaction(()=>{
+    const dto=publicRoutes.visibleAnalysis(db,req.body.claimId)?.dto;
+    if(!dto)return null;
+    db.prepare(`INSERT INTO public_analysis_bookmarks(user_id,claim_id,saved_at_ms) VALUES(?,?,?)
+      ON CONFLICT(user_id,claim_id) DO NOTHING`).run(req.userId,dto.claimId,Date.now());
+    return dto.claimId;
+  }).immediate();
+  return saved?res.status(201).json({saved:true,claimId:saved}):
+    res.status(404).json({error:'Public analysis unavailable'});
+});
+app.delete('/api/v1/me/saved/:claimId',(req,res)=>{
+  res.set('Cache-Control',publicRoutes.PRIVATE_CACHE);
+  const claimId=bookmarkId(req.params.claimId);
+  if(!claimId)return res.status(400).json({error:'Invalid bookmark request'});
+  db.prepare('DELETE FROM public_analysis_bookmarks WHERE user_id=? AND claim_id=?').run(req.userId,claimId);
+  return res.json({saved:false,claimId});
 });
 app.use(ordinaryJson);
 

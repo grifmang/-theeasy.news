@@ -68,6 +68,38 @@ function id(value) {
 function createEditorRouter(db,{archive,sourceRegistry,htmlExtraction,pdfExtraction,budgetLimits={dailyMicros:0,monthlyMicros:0},
   budgetGuard=null,clock=Date.now}={}) {
   const router=express.Router();
+  router.get('/publication-review-queue',publicationRoute((req,res)=>{
+    const after=req.query.after===undefined?0:publicationId(req.query.after);
+    if(Object.keys(req.query).some(key=>key!=='after'))
+      throw Object.assign(new Error('Invalid queue query'),{code:'invalid_request'});
+    const rows=db.prepare(`SELECT v.id version_id,v.claim_id,v.created_at_ms,c.wording,
+      j.id job_id,j.state job_state,j.report_id,
+      r.id review_id,r.decision review_decision
+      FROM analysis_versions v JOIN research_claims c ON c.id=v.claim_id
+      LEFT JOIN analysis_verification_jobs j ON j.id=(SELECT MAX(j2.id)
+        FROM analysis_verification_jobs j2 WHERE j2.analysis_version_id=v.id)
+      LEFT JOIN publication_review_events r ON r.id=(SELECT MAX(r2.id)
+        FROM publication_review_events r2 WHERE r2.analysis_version_id=v.id)
+      WHERE v.id>? ORDER BY v.id LIMIT 50`).all(after);
+    res.json({items:rows.map(row=>({analysisVersionId:row.version_id,claimId:row.claim_id,
+      title:row.wording.slice(0,300),createdAtMs:row.created_at_ms,jobId:row.job_id,
+      jobState:row.job_state,reportId:row.report_id,reviewId:row.review_id,
+      reviewDecision:row.review_decision})),nextAfter:rows.length===50?rows.at(-1).version_id:null});
+  }));
+  router.get('/claims/:id/publication-history',publicationRoute((req,res)=>{
+    const claimId=publicationId(req.params.id);
+    const after=req.query.after===undefined?0:publicationId(req.query.after);
+    if(Object.keys(req.query).some(key=>key!=='after'))
+      throw Object.assign(new Error('Invalid history query'),{code:'invalid_request'});
+    if(!db.prepare('SELECT id FROM research_claims WHERE id=?').get(claimId))
+      return res.status(404).json({error:'Publication record not found'});
+    const rows=db.prepare(`SELECT e.id,e.action,e.generation,e.occurred_at_ms,s.analysis_version_id
+      FROM publication_events e LEFT JOIN publication_snapshots s ON s.id=e.snapshot_id
+      WHERE e.claim_id=? AND e.id>? ORDER BY e.id LIMIT 50`).all(claimId,after);
+    res.json({items:rows.map(row=>({id:row.id,action:row.action,generation:row.generation,
+      occurredAtMs:row.occurred_at_ms,analysisVersionId:row.analysis_version_id})),
+      nextAfter:rows.length===50?rows.at(-1).id:null});
+  }));
   router.get('/claims/:id/publication-state',publicationRoute((req,res)=>{
     const state=publication.publicationHeadState(db,{claimId:publicationId(req.params.id),actorId:req.userId});
     res.json({claimId:state.claimId,head:state.head?{generation:state.head.generation,

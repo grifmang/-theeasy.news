@@ -2,7 +2,7 @@
 const Database = require('better-sqlite3');
 const { createHash, randomUUID } = require('crypto');
 const { normalizePassage } = require('./retrieval/normalize');
-const SCHEMA_VERSION = 33;
+const SCHEMA_VERSION = 34;
 const configuredConnections = new WeakSet();
 
 function configureDatabaseConnection(db) {
@@ -85,6 +85,7 @@ function migrate(db) {
     require('./migrations/031-analysis-verification-jobs').migrateAnalysisVerificationJobs(db);
     require('./migrations/032-publication').migratePublication(db);
     require('./migrations/033-publication-delivery').migratePublicationDelivery(db);
+    require('./migrations/034-public-bookmarks').migratePublicBookmarks(db);
   }).immediate();
 }
 

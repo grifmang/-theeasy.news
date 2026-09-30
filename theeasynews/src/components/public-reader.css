@@ -139,3 +139,5 @@
 @media (prefers-reduced-motion: reduce) {
   .public-reader *, .public-reader *::before, .public-reader *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+.review-json { max-height: 28rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 1rem; background: #f5f3ee; border: 1px solid #d6d2c8; }
+.source-card:focus, [id^="review-passage-"]:focus { outline: 3px solid #305a75; outline-offset: 3px; }

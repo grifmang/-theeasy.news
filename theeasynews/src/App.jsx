@@ -9,6 +9,9 @@ import PublicHome from './components/PublicHome';
 import Topic from './components/Topic';
 import Claim from './components/Claim';
 import Analysis from './components/Analysis';
+import Corrections from './components/Corrections';
+import ReviewQueue from './components/ReviewQueue';
+import ReviewDetail from './components/ReviewDetail';
 import { LegacyArticleUnavailable } from './components/PublicReader';
 import NavBar from './components/NavBar';
 import './components/public-reader.css';
@@ -46,10 +49,13 @@ function App() {
           {sessionError && <p role="alert">{sessionError}</p>}
           <Routes>
             <Route path="/editor" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <React.Suspense fallback={<p role="status">Loading research desk...</p>}><ResearchDesk /></React.Suspense> : <Navigate to="/login" />} />
+            <Route path="/editor/reviews" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <ReviewQueue /> : <Navigate to="/login" />} />
+            <Route path="/editor/reviews/:versionId" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <ReviewDetail /> : <Navigate to="/login" />} />
             <Route path="/" element={<PublicHome />} />
             <Route path="/topics/:slug" element={<Topic />} />
             <Route path="/claims/:id" element={<Claim />} />
-            <Route path="/analyses/:slug" element={<Analysis />} />
+            <Route path="/analyses/:slug" element={<Analysis userId={userId} />} />
+            <Route path="/corrections" element={<Corrections />} />
             <Route path="/login" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <Navigate to="/" /> : <Login onLogin={handleLogin} />} />
             <Route path="/saved" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <SavedArticles userId={userId} /> : <Navigate to="/login" />} />
             <Route path="/authors" element={<Authors />} />

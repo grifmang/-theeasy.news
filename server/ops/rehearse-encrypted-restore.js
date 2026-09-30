@@ -88,7 +88,7 @@ const deadline=setTimeout(()=>process.exit(91),45000);
     require('/app/storage').migrate(copyDb);require('/app/legacy-schema').migrateLegacy(copyDb);
     check(copyDb);
     const version=copyDb.prepare('SELECT MAX(version) v FROM rebuild_migrations').get().v;
-    assert(version===33);
+    assert(version===require('/app/storage').SCHEMA_VERSION);
     const afterCounts=counts(copyDb),afterRows=rows(copyDb);
     const preserved=identityTables.every(t=>beforeCounts[t]===afterCounts[t]&&util.isDeepStrictEqual(beforeRows[t],afterRows[t]));
     assert(preserved);
@@ -108,7 +108,7 @@ const deadline=setTimeout(()=>process.exit(91),45000);
     await service.stop();assert(!service.server.listening&&!service.db.open);service=null;
     assert(hashFile(source)===beforeHash);
     assert(fs.readdirSync(root).sort().join(',')==='migrated.db,source.db');
-    const report={ok:true,schemaBefore:21,schemaAfter:33,integrity:true,foreignKeys:true,
+    const report={ok:true,schemaBefore:21,schemaAfter:version,integrity:true,foreignKeys:true,
       zeroOriginals:true,sourcePreserved:true,identityPreserved:true,counts:afterCounts,
       healthLive:true,healthReady:true,serviceStopped:true,resourceLimits:true};
     process.stdout.write(JSON.stringify(report)+'\n');
@@ -182,7 +182,7 @@ function strictReport(bytes) {
   const obj=JSON.parse(raw);
   const keys=['ok','schemaBefore','schemaAfter','integrity','foreignKeys','zeroOriginals','sourcePreserved',
     'identityPreserved','counts','healthLive','healthReady','serviceStopped','resourceLimits'];
-  if(Object.keys(obj).sort().join(',')!==keys.sort().join(',')||obj.ok!==true||obj.schemaBefore!==21||obj.schemaAfter!==33||
+  if(Object.keys(obj).sort().join(',')!==keys.sort().join(',')||obj.ok!==true||obj.schemaBefore!==21||obj.schemaAfter!==require('../storage').SCHEMA_VERSION||
     ['integrity','foreignKeys','zeroOriginals','sourcePreserved','identityPreserved','healthLive','healthReady','serviceStopped','resourceLimits'].some(k=>obj[k]!==true))fail('Probe output invalid');
   const tableKeys=['users','user_roles','google_identities','auth_sessions','role_change_events'];
   if(!obj.counts||Object.keys(obj.counts).sort().join(',')!==tableKeys.sort().join(',')||
@@ -344,7 +344,7 @@ async function rehearse({artifact,artifactSha256,imageId,manifestSha256,docker,a
   }
 }
 // Test-only fixture has no path input and no DPAPI/age access. Intercept exactly
-// migrations 022-033 while constructing a synthetic schema21 source in memory.
+// migrations 022-034 while constructing a synthetic schema21 source in memory.
 async function synthetic({imageId,manifestSha256,docker,corrupt=false,testBlock=false,
   hostDeadlineMs=60000,cancelAfterMs=0,testListFailure=false,testNeverClose=false}) {
   if(process.platform!=='win32')fail('Windows only');
@@ -355,7 +355,7 @@ async function synthetic({imageId,manifestSha256,docker,corrupt=false,testBlock=
     const originalLoad=Module._load;
     try {
       Module._load=function(request,parent,isMain){
-        if(/^\.\/migrations\/(?:0(?:2[2-9]|3[0-3]))-/.test(request)&&parent?.filename===path.join(__dirname,'..','storage.js'))
+        if(/^\.\/migrations\/(?:0(?:2[2-9]|3[0-4]))-/.test(request)&&parent?.filename===path.join(__dirname,'..','storage.js'))
           return new Proxy({}, {get:()=>()=>{}});
         return originalLoad.apply(this,arguments);
       };

@@ -108,9 +108,34 @@ const visible=`FROM publication_manifest_heads h
       WHERE r.outbox_id=o.id)=1`;
 const select=`SELECT h.claim_id,s.id snapshot_id,s.analysis_version_id,s.dto_json,s.dto_sha256,
   topic.id topic_id ${visible}`;
+function visibleAnalysis(db,claimId){
+  const row=db.prepare(`${select} AND h.claim_id=?`).get(claimId);
+  const dto=publicDto(db,row);
+  return dto?{row,dto}:null;
+}
+function chronology(db,claimId){
+  const rows=db.prepare(`SELECT e.action,e.occurred_at_ms
+    FROM publication_events e
+    WHERE e.claim_id=? ORDER BY e.generation LIMIT 100`).all(claimId);
+  return rows.filter(row=>['publish','correct'].includes(row.action)&&
+    Number.isSafeInteger(row.occurred_at_ms)&&row.occurred_at_ms>=0).map(row=>({
+    type:row.action==='publish'?'publication':'correction',occurredAtMs:row.occurred_at_ms}));
+}
 
 function createPublicRouter(db){
   const router=express.Router();
+  router.get('/corrections',(req,res)=>{
+    const p=pagination(req,res);if(!p)return;
+    const items=[];
+    for(const row of db.prepare(`${select} ORDER BY h.claim_id LIMIT ?`).iterate(MAX_SCAN)){
+      const dto=publicDto(db,row);if(!dto)continue;
+      const events=chronology(db,row.claim_id).filter(event=>event.type==='correction');
+      if(events.length)items.push({claimId:dto.claimId,title:dto.title,
+        analysisSlug:`analysis-${dto.analysisVersionId}`,latestCorrectionAtMs:events.at(-1).occurredAtMs});
+      if(items.length>=p.offset+p.pageSize)break;
+    }
+    return respond(req,res,{items:items.slice(p.offset),page:p.page,pageSize:p.pageSize});
+  });
   router.get('/topics',(req,res)=>{
     const p=pagination(req,res);if(!p)return;
     const rows=db.prepare(`${select} ORDER BY topic.id,h.claim_id LIMIT ?`).iterate(MAX_SCAN);
@@ -142,14 +167,16 @@ function createPublicRouter(db){
   });
   router.get('/claims/:id',(req,res)=>{
     const claimId=id(req.params.id);if(!claimId)return error(res,400,'invalid_id');
-    const row=db.prepare(`${select} AND h.claim_id=?`).get(claimId),dto=publicDto(db,row);
-    return dto?respond(req,res,{claim:dto,analysisSlug:`analysis-${dto.analysisVersionId}`}):error(res,404,'not_found');
+    const visible=visibleAnalysis(db,claimId);
+    return visible?respond(req,res,{claim:visible.dto,analysisSlug:`analysis-${visible.dto.analysisVersionId}`,
+      chronology:chronology(db,claimId)}):error(res,404,'not_found');
   });
   router.get('/analyses/:slug',(req,res)=>{
     const match=/^analysis-([1-9]\d*)$/.exec(req.params.slug),versionId=match&&id(match[1]);
     if(!versionId)return error(res,400,'invalid_slug');
     const row=db.prepare(`${select} AND s.analysis_version_id=?`).get(versionId),dto=publicDto(db,row);
-    return dto?respond(req,res,{analysis:dto,slug:`analysis-${versionId}`}):error(res,404,'not_found');
+    return dto?respond(req,res,{analysis:dto,slug:`analysis-${versionId}`,
+      chronology:chronology(db,dto.claimId)}):error(res,404,'not_found');
   });
   router.get('/search',(req,res)=>{
     const p=pagination(req,res);if(!p)return;
@@ -172,4 +199,4 @@ function createPublicRouter(db){
   });
   return router;
 }
-module.exports={createPublicRouter,PRIVATE_CACHE};
+module.exports={createPublicRouter,PRIVATE_CACHE,visibleAnalysis};
