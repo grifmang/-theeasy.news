@@ -2,24 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const NavBar = ({ userId, onLogout }) => {
-  const [categories, setCategories] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  const API = process.env.REACT_APP_API_URL || '';
-
-  useEffect(() => {
-    fetch(`${API}/api/categories`)
-      .then(res => res.json())
-      .then(data => setCategories(data.categories || []))
-      .catch(() => {});
-  }, [API]);
+  const readerPath = location.pathname === '/' || location.pathname.startsWith('/topics/') ||
+    location.pathname.startsWith('/claims/') || location.pathname.startsWith('/analyses/') ||
+    location.pathname.startsWith('/articles/') || location.pathname === '/saved';
 
   useEffect(() => {
     setMenuOpen(false);
   }, [location]);
 
   return (
-    <nav className="navbar" role="navigation" aria-label="Main navigation">
+    <nav className={`navbar${readerPath ? ' navbar--reader' : ''}`} aria-label="Main navigation">
       <Link className="logo" to="/">
         The <span className="logo-accent">Easy</span> News
       </Link>
@@ -32,16 +26,7 @@ const NavBar = ({ userId, onLogout }) => {
         {menuOpen ? '\u2715' : '\u2630'}
       </button>
       <div className={`nav-links${menuOpen ? ' open' : ''}`}>
-        <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Home</Link>
-        {categories.map(cat => (
-          <Link
-            key={cat}
-            to={`/category/${encodeURIComponent(cat)}`}
-            className={decodeURIComponent(location.pathname) === `/category/${cat}` ? 'active' : ''}
-          >
-            {cat}
-          </Link>
-        ))}
+        <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Public research</Link>
         {userId ? (
           <>
             <Link to="/saved" className={location.pathname === '/saved' ? 'active' : ''}>Saved</Link>

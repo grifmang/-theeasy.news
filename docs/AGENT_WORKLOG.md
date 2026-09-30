@@ -1866,3 +1866,41 @@ documentation/simple UI, Sol medium for backend/deployment/debug/E2E (high when
 needed), Astra only for a specific difficult blocker/high-risk review. Root model
 selection remains owner-controlled in the picker; subagent usage is part of
 account-wide usage.
+
+## 2026-09-30 — hosted release-candidate CI passed
+
+GitHub Actions run [36658183725](https://github.com/grifmang/-theeasy.news/actions/runs/36658183725)
+passed in 2m32s on branch `codex/accuracy-production`, exact SHA
+`4b7c4d04f9ddd917b1c00b725e126a09e451bda4`. Gates passed for checkout without
+persisted credentials, pinned Gitleaks history/source scanning, Node setup,
+locked dependency installs and advisory checks, full backend/frontend
+regressions, frontend build, release bundle staging/verification, Docker build
+from the bundle, generated source/browser asset secret scans, isolated container
+extraction/startup/shutdown, exact-image PID1/SIGTERM, native sandbox adversarial
+checks, and retained/uploaded evidence.
+
+The CI-only fixes added Linux test-fixture mode 0700 and narrowed frontend alert
+selectors; no production logic was relaxed. Railway and Netlify did not
+auto-deploy: Railway tracks `main`, while Netlify deploys through the CLI.
+Railway remains schema21 and no deployment or production migration occurred.
+This is hosted CI evidence for the exact release candidate, not production
+readiness or deployment approval. Backup-first migration, Railway sink/archive
+ownership and export durability, recovery/key-custody gates, accuracy, coverage,
+public/E2E and remaining approvals are still open. Owner untracked
+`docs/REVIEW-2026-06-09.md` remained excluded from the release bundle.
+
+## 2026-09-30 — Task17 topic browse API and Task18 public reader/review UI
+
+Task17 implements `GET /api/v1/topics/:slug` with strict
+`topic-<positive safe integer>` validation, bounded pagination, an approved
+public DTO, and ETags. Task18 adds public home/topic/claim/analysis routes and
+an honest legacy article notice. The editor publication panel supports
+exact-hash review, publish, correct, and retract. Malformed-success retry
+identity is preserved; the route-stale DTO issue is fixed; the UI and
+transaction enforce the active-version fence. Final bounded Astra recheck found
+no remaining blocker within this slice.
+
+Verification: backend 58/58 suites (546 passed, 1 skipped); frontend 6/6 suites
+(41 tests); lint, public-config, build, and `git diff --check` passed. No
+Railway/Netlify deployment occurred. Production remains schema21; local schema
+is 33. Broader release, deployed-browser, accessibility, and E2E gates remain.

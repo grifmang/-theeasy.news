@@ -26,12 +26,20 @@ encrypted artifacts are held for manual review. No Railway deployment or
 production migration occurred; deployed Railway remains schema21 and local
 runtime is schema33.
 
-The unpushed GitHub workflow now contains an exact-image Ubuntu PID 1/SIGTERM
-gate matching the local smoke: non-root UID1000 data, no network/capabilities,
-no-new-privileges, read-only root, live/ready health, `/proc/1` assertions,
-graceful stop state, and post-stop schema33 integrity/foreign-key checks. Its YAML
-and shell syntax pass locally. This is preparation, not hosted CI evidence; the
-workflow must run successfully from an authorized commit before release.
+Hosted release-candidate CI passed in GitHub Actions run
+[36658183725](https://github.com/grifmang/-theeasy.news/actions/runs/36658183725)
+in 2m32s on `codex/accuracy-production` at exact SHA
+`4b7c4d04f9ddd917b1c00b725e126a09e451bda4`. It passed the full regression/build,
+dependency/advisory, secret scanning, bundle staging and bundle-only image
+build, isolated runtime, exact-image PID1/SIGTERM, and native sandbox adversarial
+gates; release evidence was retained/uploaded. CI-only fixes addressed Linux
+fixture modes and precise frontend alert selectors, without relaxing production
+logic. Railway tracks `main` and Netlify deploys via CLI, so neither auto-deployed.
+This is CI evidence for that exact candidate, not production readiness or
+deployment approval. Railway remains schema21; backup-first migration, sink and
+archive ownership, export durability, recovery/key custody, public/E2E, accuracy,
+coverage, and remaining approvals are still required. The owner’s untracked
+`docs/REVIEW-2026-06-09.md` was excluded from the bundle.
 
 Local Task17 public reads are now guarded by `PUBLIC_READ_ENABLED`, which
 defaults false and is accepted only in staging with the private exporter. The
@@ -78,8 +86,9 @@ Parser/PDF/non-root container/native sandbox/archive smokes passed; relevant
 parent tests passed 54, 1 skipped. Astra found no P0–P3 issues and the original
 TOCTOU P2 is closed within the trusted-runner boundary.
 
-This image artifact is not yet deployable. Hosted Linux CI has not run. The exact
-image has now passed the local PID 1/SIGTERM gate described below. A later
+This image artifact is not yet deployable. Hosted Linux CI for the later release
+candidate passed as recorded above; this does not close the remaining production
+gates. The exact image has also passed the local PID 1/SIGTERM gate described below. A later
 read-only Railway inspection confirmed UID 1000 database access but identified
 missing sink/archive write ownership. Prepare those paths during controlled
 maintenance and validate export durability; then complete
@@ -853,3 +862,17 @@ Rebuilt image `sha256:2c4b03110966e649c984a6108a1f5fa869137cf031ad915eb2336e87f8
 passed actual extraction HTTP and maintenance/no-DB smoke checks as UID1000 with
 network none, no capabilities and no-new-privileges. Backend533 tests/57 suites pass.
 Models and ingestion remain disabled; this does not satisfy public-release gates.
+
+## Task17/18 public reader and publication review implementation status
+
+Local code implements `GET /api/v1/topics/:slug` with strict
+`topic-<positive safe integer>` validation, bounded pagination, approved DTO,
+and ETags, plus public home/topic/claim/analysis routes with an honest legacy
+article notice. The editor publication panel supports exact-hash review,
+publish, correct, and retract; malformed-success retry identity is preserved,
+and the route-stale DTO fix plus UI/transaction active-version fence are in
+place. Backend verification: 58/58 suites, 546 passed and 1 skipped; frontend
+6/6 suites, 41 tests, lint, public-config, build and diff check passed. Final
+bounded Astra recheck found no remaining blocker in this slice. No Railway or
+Netlify deploy has occurred: production remains schema21 and local schema is
+33. Broader release, deployed-browser, accessibility and E2E gates remain open.

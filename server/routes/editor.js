@@ -71,7 +71,8 @@ function createEditorRouter(db,{archive,sourceRegistry,htmlExtraction,pdfExtract
   router.get('/claims/:id/publication-state',publicationRoute((req,res)=>{
     const state=publication.publicationHeadState(db,{claimId:publicationId(req.params.id),actorId:req.userId});
     res.json({claimId:state.claimId,head:state.head?{generation:state.head.generation,
-      eventId:state.head.eventId,state:state.head.state}:null,
+      eventId:state.head.eventId,state:state.head.state,
+      analysisVersionId:state.head.analysisVersionId}:null,
       isPublicationOwner:state.isPublicationOwner});
   }));
   router.get('/analysis-versions/:id/publication-state',publicationRoute((req,res)=>{
@@ -86,7 +87,8 @@ function createEditorRouter(db,{archive,sourceRegistry,htmlExtraction,pdfExtract
         id:state.latestReview.id,decision:state.latestReview.decision,
         occurredAtMs:state.latestReview.occurredAtMs}:null,
       head:state.head?{generation:state.head.generation,eventId:state.head.eventId,
-        state:state.head.state}:null,isPublicationOwner:state.isPublicationOwner});
+        state:state.head.state,analysisVersionId:state.head.analysisVersionId}:null,
+      isPublicationOwner:state.isPublicationOwner});
   }));
   router.post('/analysis-versions/:id/publication-reviews',publicationRoute((req,res)=>{
     publicationBody(req.body,['reportId','expectedDraftSha256','expectedReportSha256',

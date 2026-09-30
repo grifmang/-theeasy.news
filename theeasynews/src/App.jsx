@@ -4,11 +4,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Authors from './components/Authors';
 import About from './components/About';
 import Login from './components/Login';
-import Articles from './components/Articles';
-import CategoryArticles from './components/CategoryArticles';
 import SavedArticles from './components/SavedArticles';
-import Article from './components/Article';
+import PublicHome from './components/PublicHome';
+import Topic from './components/Topic';
+import Claim from './components/Claim';
+import Analysis from './components/Analysis';
+import { LegacyArticleUnavailable } from './components/PublicReader';
 import NavBar from './components/NavBar';
+import './components/public-reader.css';
 const ResearchDesk = React.lazy(() => import('./components/ResearchDesk'));
 
 function App() {
@@ -38,17 +41,20 @@ function App() {
     <Router>
       <div className="app">
         <NavBar userId={userId} onLogout={handleLogout} />
-        <main>
+        <a className="reader-skip-link" href="#main-content">Skip to main content</a>
+        <main id="main-content" tabIndex="-1">
           {sessionError && <p role="alert">{sessionError}</p>}
           <Routes>
             <Route path="/editor" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <React.Suspense fallback={<p role="status">Loading research desk...</p>}><ResearchDesk /></React.Suspense> : <Navigate to="/login" />} />
-            <Route path="/" element={<Articles userId={userId} />} />
-            <Route path="/category/:name" element={<CategoryArticles userId={userId} />} />
+            <Route path="/" element={<PublicHome />} />
+            <Route path="/topics/:slug" element={<Topic />} />
+            <Route path="/claims/:id" element={<Claim />} />
+            <Route path="/analyses/:slug" element={<Analysis />} />
             <Route path="/login" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <Navigate to="/" /> : <Login onLogin={handleLogin} />} />
             <Route path="/saved" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <SavedArticles userId={userId} /> : <Navigate to="/login" />} />
             <Route path="/authors" element={<Authors />} />
             <Route path="/about" element={<About />} />
-            <Route path="/articles/:id" element={<Article />} />
+            <Route path="/articles/:id" element={<LegacyArticleUnavailable />} />
           </Routes>
         </main>
       </div>

@@ -121,6 +121,25 @@ function createPublicRouter(db){
     }
     return respond(req,res,{items:[...topics.values()].slice(p.offset),page:p.page,pageSize:p.pageSize});
   });
+  router.get('/topics/:slug',(req,res)=>{
+    const match=/^topic-([1-9]\d*)$/.exec(req.params.slug),topicId=match&&id(match[1]);
+    if(!topicId)return error(res,400,'invalid_slug');
+    const p=pagination(req,res);if(!p)return;
+    const rows=db.prepare(`${select} AND topic.id=? ORDER BY h.claim_id LIMIT ?`)
+      .iterate(topicId,MAX_SCAN);
+    const items=[];let visibleCount=0;
+    for(const row of rows){const dto=publicDto(db,row);if(!dto)continue;
+      if(visibleCount>=p.offset)items.push({claimId:dto.claimId,title:dto.title,
+        attribution:dto.attribution,status:dto.status,
+        analysisSlug:`analysis-${dto.analysisVersionId}`,summary:dto.summary,
+        limitations:dto.limitations});
+      visibleCount++;
+      if(visibleCount>=p.offset+p.pageSize)break;
+    }
+    if(!visibleCount)return error(res,404,'not_found');
+    return respond(req,res,{topic:{id:topicId,slug:`topic-${topicId}`},items,
+      page:p.page,pageSize:p.pageSize});
+  });
   router.get('/claims/:id',(req,res)=>{
     const claimId=id(req.params.id);if(!claimId)return error(res,400,'invalid_id');
     const row=db.prepare(`${select} AND h.claim_id=?`).get(claimId),dto=publicDto(db,row);

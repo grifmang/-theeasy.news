@@ -14,9 +14,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('renders articles heading', async () => {
+test('renders the evidence-first public research landing page', async () => {
   render(<App />);
-  const heading = await screen.findByText(/latest articles/i);
+  const heading = await screen.findByRole('heading', { name: /understand what the evidence can/i });
   expect(heading).toBeInTheDocument();
 });
 

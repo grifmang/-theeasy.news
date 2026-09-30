@@ -1,98 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FacebookShareButton, TwitterShareButton, TelegramShareButton, LinkedinShareButton } from 'react-share';
+import { apiRequest } from '../api';
+import { RequestState } from './PublicReader';
 
-const API = process.env.REACT_APP_API_URL || '';
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
-const SavedArticles = ({ userId }) => {
-  const [articles, setArticles] = useState([]);
+export default function SavedArticles() {
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [revision, setRevision] = useState(0);
+  const load = useCallback(signal => {
+    setLoading(true); setError(null);
+    apiRequest('/api/v1/me/saved', { signal })
+      .then(data => setItems(data.items || []))
+      .catch(requestError => { if (requestError.name !== 'AbortError') setError(requestError); })
+      .finally(() => { if (!signal.aborted) setLoading(false); });
+  }, []);
+  useEffect(() => { const controller = new AbortController(); load(controller.signal); return () => controller.abort(); }, [load, revision]);
 
-  useEffect(() => {
-    if (!userId) { setLoading(false); return; }
-    setLoading(true);
-    fetch(`${API}/api/user/${userId}/saved`, {
-      credentials: 'include'
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load saved articles');
-        return res.json();
-      })
-      .then(data => {
-        setArticles(data.articles || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [userId]);
-
-  if (loading) {
-    return (
-      <div className="container">
-        <div className="loading">
-          <div className="spinner" />
-          <p>Loading saved articles...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container">
-        <div className="error-message">
-          <p>{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container article-list">
-      <h1 className="page-title">Saved Articles</h1>
-      {articles.length === 0 ? (
-        <div className="empty-state">
-          <h3>No saved articles yet</h3>
-          <p>Browse articles and click &quot;Save&quot; to bookmark them here.</p>
-          <Link to="/" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block', textDecoration: 'none' }}>Browse Articles</Link>
-        </div>
-      ) : (
-        <ul>
-          {articles.map(a => {
-            const shareUrl = `${window.location.origin}/articles/${a.id}`;
-            return (
-              <li className="article-card" key={a.id}>
-                <div className="article-meta">
-                  <span className="author">By {a.author}</span>
-                  {a.created_at && <span className="date">{formatDate(a.created_at)}</span>}
-                  {a.source && <span className="source">{a.source}</span>}
-                </div>
-                <h3 className="article-title">
-                  <Link to={`/articles/${a.id}`}>{a.title}</Link>
-                </h3>
-                <p className="article-excerpt">{a.content}</p>
-                <div className="share-buttons">
-                  <FacebookShareButton url={shareUrl}><span>Facebook</span></FacebookShareButton>
-                  <TwitterShareButton url={shareUrl}><span>X</span></TwitterShareButton>
-                  <TelegramShareButton url={shareUrl}><span>Telegram</span></TelegramShareButton>
-                  <LinkedinShareButton url={shareUrl}><span>LinkedIn</span></LinkedinShareButton>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-};
-
-export default SavedArticles;
+  return <div className="public-reader"><div className="reader-main reader-page">
+    <header className="reader-page__header"><p className="eyebrow">Your library</p><h1>Saved research</h1><p className="reader-deck">Public analyses you save will be collected here.</p></header>
+    <RequestState loading={loading} error={error} onRetry={() => setRevision(value => value + 1)} />
+    {!loading && !error && (items.length ? <ul className="reader-list">{items.map(item => <li className="reader-card" key={item.analysisSlug}><h2><Link to={`/analyses/${item.analysisSlug}`}>{item.title}</Link></h2></li>)}</ul> : <section className="reader-empty"><h2>No saved public research</h2><p>There are no saved public analyses in this account yet.</p><Link className="reader-link" to="/">Browse the research library</Link></section>)}
+  </div></div>;
+}

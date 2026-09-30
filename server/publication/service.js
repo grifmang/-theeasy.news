@@ -65,8 +65,16 @@ function publicationHeadState(db,{claimId,actorId}){
   if(!validId(claimId))fail('invalid_request');
   if(!db.prepare('SELECT id FROM research_claims WHERE id=?').get(claimId))fail('unknown_claim');
   const currentHead=head(db,claimId);
+  let activeVersionId=null;
+  if(currentHead?.state==='active'){
+    const snapshot=db.prepare('SELECT analysis_version_id FROM publication_snapshots WHERE id=? AND claim_id=?')
+      .get(currentHead.snapshot_id,claimId);
+    if(!validId(snapshot?.analysis_version_id))fail('publication_integrity');
+    activeVersionId=snapshot.analysis_version_id;
+  }
   return {claimId,head:currentHead?{generation:currentHead.generation,
-    eventId:currentHead.event_id,state:currentHead.state}:null,
+    eventId:currentHead.event_id,state:currentHead.state,
+    analysisVersionId:activeVersionId}:null,
     isPublicationOwner:ownerEvent(db,actorId)?.allowed===1};
 }
 function publicationVersionState(db,{analysisVersionId,reportId,actorId}){
@@ -99,6 +107,13 @@ function approveVersion(db,{analysisVersionId,reportId,expectedDraftSha256,expec
     requireEditor(db,actorId);
     const prior=idempotent(db,'publication_review_events',requestKey,requestHash);if(prior)return prior;
     const {version,projection}=current(db,analysisVersionId),checked=report(db,reportId,version);
+    const activeHead=head(db,version.claim_id);
+    if(activeHead?.state==='active'){
+      const snapshot=db.prepare('SELECT analysis_version_id FROM publication_snapshots WHERE id=? AND claim_id=?')
+        .get(activeHead.snapshot_id,version.claim_id);
+      if(!validId(snapshot?.analysis_version_id))fail('publication_integrity');
+      if(snapshot.analysis_version_id===version.id)fail('review_conflict');
+    }
     if(version.draft_sha256!==expectedDraftSha256||checked.row.report_sha256!==expectedReportSha256||
       checked.row.checked_version_hash!==expectedCheckedVersionHash||
       projection.dtoSha256!==expectedDtoSha256)fail('version_changed');

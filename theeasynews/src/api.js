@@ -8,11 +8,22 @@ export async function apiRequest(path, {method='GET',body,signal} = {}) {
   if(!['GET','HEAD'].includes(method) && csrf) headers['X-CSRF-Token']=csrf;
   const response=await fetch(`${API}${path}`,{method,credentials:'include',headers,signal,
     ...(body===undefined?{}:{body:JSON.stringify(body)})});
-  const data=await response.json();
+  let data={};
+  try {data=await response.json();}
+  catch(parseError) {
+    if(parseError?.name==='AbortError') throw parseError;
+    if(response.ok) throw new Error('The server response could not be confirmed. Retry or refresh.');
+    // Error bodies may be empty; retain the HTTP status below.
+  }
   if(!response.ok) {
     if(response.status===401) acceptSession(null);
-    const error=new Error(data.error || 'Request failed'); error.status=response.status; throw error;
+    const error=new Error(typeof data.error==='string' ? data.error : 'Request failed');
+    error.status=response.status;
+    error.code=typeof data.error?.code==='string' ? data.error.code : null;
+    throw error;
   }
+  if(!data||typeof data!=='object'||Array.isArray(data))
+    throw new Error('The server response could not be confirmed. Retry or refresh.');
   return data;
 }
 export async function restoreSession() {

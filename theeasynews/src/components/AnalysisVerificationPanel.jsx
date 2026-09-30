@@ -1,5 +1,6 @@
 import React,{useEffect,useId,useState} from 'react';
 import {apiRequest} from '../api';
+import PublicationReviewPanel from './PublicationReviewPanel';
 
 function message(error) {
   if(error.status===401) return 'Your session expired. Sign in again.';
@@ -135,6 +136,11 @@ export default function AnalysisVerificationPanel({claimId}) {
           <button type="button" disabled={!reason.trim()||!permission.allowed} onClick={()=>changePermission(false)}>Revoke execution permission</button>
         </fieldset>
         <Report report={report}/>
+        {job.state==='done'&&detail.job?.id===jobId&&
+          detail.report?.metadata?.id&&detail.report.metadata.analysisVersionId===version?.id&&
+          version?.id&&<PublicationReviewPanel
+          key={`${claimId}-${version.id}-${detail.report.metadata.id}`}
+          claimId={claimId} analysisVersionId={version.id} reportId={detail.report.metadata.id} report={report}/>}
         <JsonDetails label="Safe job and version metadata" value={{analysisVersion:detail.analysisVersion,permission:detail.permission,reportMetadata:detail.report?.metadata}}/>
       </section>}
     </>}

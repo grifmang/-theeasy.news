@@ -1,5 +1,44 @@
 # Resume checkpoint — 2026-09-29
 
+## Task17 topic browse API and Task18 public reader/review UI — 2026-09-30
+
+Task17 implements `GET /api/v1/topics/:slug`, accepting only the strict
+`topic-<positive safe integer>` form. Results use bounded pagination, an
+approved public DTO, and ETags. Task18 adds public home, topic, claim, and
+analysis routes, with an honest notice for legacy articles. The editor
+publication panel supports exact-hash review, publish, correct, and retract;
+malformed-success retry identity is preserved. A stale route DTO issue was
+fixed, and both the UI and transaction enforce the active version fence.
+Scoped final Astra recheck found no remaining blocker in this slice.
+
+Verification: backend 58/58 suites, 546 passed and 1 skipped; frontend 6/6
+suites, 41 tests; lint, public-config check, build, and `git diff --check`
+passed. No Railway or Netlify deploy has occurred. Production remains schema21;
+local schema is 33. Broader release, deployed-browser, accessibility, and E2E
+gates remain open.
+
+## Hosted release-candidate CI passed — 2026-09-30
+
+GitHub Actions run [36658183725](https://github.com/grifmang/-theeasy.news/actions/runs/36658183725)
+passed in 2m32s for branch `codex/accuracy-production`, exact SHA
+`4b7c4d04f9ddd917b1c00b725e126a09e451bda4`. The hosted run checked out without
+persisted credentials; scanned pinned Gitleaks source/history; installed locked
+dependencies and passed advisory gates; passed the full backend and frontend
+regressions, frontend build, release-bundle staging/verification, bundle-only
+Docker build, generated-source/browser-asset secret scans, isolated container
+extraction/startup/shutdown, exact-image PID1/SIGTERM, and native sandbox
+adversarial checks; then retained and uploaded release evidence. CI fixes were
+limited to Linux test-fixture mode 0700 and precise frontend alert selectors;
+production logic was not relaxed.
+
+This proves the release-candidate CI gates for that exact source revision. It
+does not approve production readiness or deployment. Railway and Netlify did
+not auto-deploy: Railway tracks `main`, while Netlify deployment is CLI-driven.
+Railway remains schema21; controlled backup-first migration, volume/sink
+ownership and export durability, recovery and key custody, approval, accuracy,
+coverage, public/E2E, and other release gates remain open. The owner’s untracked
+`docs/REVIEW-2026-06-09.md` was excluded from the release bundle.
+
 ## Scheduled encrypted backup restored — 2026-09-30
 
 The scheduled Windows backup now runs against the physical AppData path. The
@@ -116,7 +155,7 @@ deployment occurred. The previously verified image and manifest predate this
 API change and must be rebuilt and reverified before release. Railway remains
 schema21.
 
-## Hosted CI PID 1 gate prepared — 2026-09-30
+## Hosted CI PID 1 gate prepared — 2026-09-30 (superseded by successful run above)
 
 `.github/workflows/ci.yml` now reproduces the exact-image PID 1/SIGTERM gate on
 Ubuntu after building the verified bundle. It initializes a disposable UID1000
@@ -128,9 +167,8 @@ SQLite schema/integrity/foreign keys. Cleanup is trapped by exact container name
 
 Ruby parsed the workflow YAML and Git Bash accepted the extracted step with
 `bash -n`. The same runtime behavior passed locally against the immutable image,
-but the new hosted step has not run because the workflow and broader rebuild are
-still untracked/unpushed. Do not claim hosted Linux CI evidence until an
-authorized commit/push produces a successful GitHub Actions run.
+but this checkpoint predates the successful hosted run above. Its earlier
+statement that hosted CI had not run is superseded by the recorded run and SHA.
 
 ## Railway backup-plan constraint — 2026-09-30
 
