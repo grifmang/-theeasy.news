@@ -50,6 +50,7 @@ function App() {
           <Routes>
             <Route path="/editor" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <React.Suspense fallback={<p role="status">Loading research desk...</p>}><ResearchDesk /></React.Suspense> : <Navigate to="/login" />} />
             <Route path="/editor/reviews" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <ReviewQueue /> : <Navigate to="/login" />} />
+            <Route path="/editor/claims/:claimId/reviews/:versionId" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <ReviewDetail /> : <Navigate to="/login" />} />
             <Route path="/editor/reviews/:versionId" element={sessionLoading ? <p role="status">Checking session...</p> : userId ? <ReviewDetail /> : <Navigate to="/login" />} />
             <Route path="/" element={<PublicHome />} />
             <Route path="/topics/:slug" element={<Topic />} />

@@ -19,7 +19,7 @@ export default function ReviewQueue(){
     {error&&<p role="alert">{error} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
     {!loading&&!error&&!items.length&&<p>No saved analysis versions yet.</p>}
     <ul className="reader-list">{items.map(item=><li className="reader-card" key={item.analysisVersionId}>
-      <h2><Link to={`/editor/reviews/${item.analysisVersionId}`}>{item.title}</Link></h2>
+      <h2><Link to={`/editor/claims/${item.claimId}/reviews/${item.analysisVersionId}`}>{item.title}</Link></h2>
       <p>Claim {item.claimId} · version {item.analysisVersionId} · verification {item.jobState||'not queued'} · review {item.reviewDecision||'not recorded'}</p>
     </li>)}</ul>
     {next&&<button type="button" disabled={loading} onClick={()=>setAfter(next)}>Load more</button>}

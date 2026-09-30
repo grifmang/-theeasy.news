@@ -1,20 +1,7 @@
 import React,{useCallback,useEffect,useId,useState} from 'react';
 import {apiRequest} from '../api';
-
-const cleanReason=value=>value.trim().length>0&&value.length<=500&&
-  [...value].every(character=>character.charCodeAt(0)>31&&character.charCodeAt(0)!==127);
-function requestKey(){
-  if(!globalThis.crypto?.randomUUID) throw new Error('A secure browser context is required to record publication decisions.');
-  return globalThis.crypto.randomUUID().replace(/-/g,'');
-}
-function errorText(error){
-  if(error?.status===401)return 'Your session expired. Sign in again, then reload publication state.';
-  if(error?.status===403)return 'Publication access was denied. Ask an editor or publication owner to check your access.';
-  if(error?.status===409)return 'Publication state changed. Review the refreshed state before making another decision.';
-  if(error?.status===422)return 'Publication is blocked by current evidence, coverage, or content. Resolve the reported limits before publishing.';
-  if(error?.status===404)return 'This publication record is unavailable. Refresh the selected report.';
-  return 'The request could not be confirmed. Retry the same decision or refresh its current state.';
-}
+import PublicationRetractionPanel from './PublicationRetractionPanel';
+import {cleanReason,errorText,requestKey} from './publication-utils';
 function Preview({preview}){
   if(!preview)return null;
   return <section className="publication-preview" aria-label="Sanitized publication preview">
@@ -31,12 +18,12 @@ function Preview({preview}){
   </section>;
 }
 
-export default function PublicationReviewPanel({claimId,analysisVersionId,reportId,report}){
+export default function PublicationReviewPanel({claimId,analysisVersionId,reportId,report,showRetraction=true}){
   const prefix=useId();
   const [state,setState]=useState(null),[headState,setHeadState]=useState(null);
   const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(null),[notice,setNotice]=useState('');
   const [revision,setRevision]=useState(0),[reviewDecision,setReviewDecision]=useState('approved');
-  const [reviewReason,setReviewReason]=useState(''),[actionReason,setActionReason]=useState(''),[retractionReason,setRetractionReason]=useState('');
+  const [reviewReason,setReviewReason]=useState(''),[actionReason,setActionReason]=useState('');
   const [pending,setPending]=useState(null),[reviewedAction,setReviewedAction]=useState(false),[approvedBinding,setApprovedBinding]=useState(null);
   const refresh=useCallback(()=>setRevision(value=>value+1),[]);
   useEffect(()=>{
@@ -73,21 +60,17 @@ export default function PublicationReviewPanel({claimId,analysisVersionId,report
   const actionPayload=()=>({action,reviewEventId:state.latestReview.id,...hashes,
     expectedGeneration:head?.generation??null,expectedHeadEventId:head?.eventId??null,
     reason:actionReason.trim(),requestKey:requestKey()});
-  const retractionPayload=()=>({expectedGeneration:head.generation,expectedHeadEventId:head.eventId,
-    reason:retractionReason.trim(),requestKey:requestKey()});
-
   async function submit(kind,payload){
     const path=kind==='review'?`/api/v1/editor/analysis-versions/${analysisVersionId}/publication-reviews`:
-      kind==='action'?`/api/v1/editor/analysis-versions/${analysisVersionId}/publication-actions`:
-        `/api/v1/editor/claims/${claimId}/publication-retraction`;
+      `/api/v1/editor/analysis-versions/${analysisVersionId}/publication-actions`;
     setBusy(true);setError(null);setNotice('');
     try {
       const result=await apiRequest(path,{method:'POST',body:payload});
       if(kind==='review'&&(!Number.isSafeInteger(result.review?.id)||result.review.id<=0||
         result.review.decision!==payload.decision))
         throw new Error('The review response could not be confirmed.');
-      if(kind!=='review'&&(!Number.isSafeInteger(result.event?.id)||result.event.id<=0||
-        result.event.action!==(kind==='action'?payload.action:'retract')))
+      if(kind==='action'&&(!Number.isSafeInteger(result.event?.id)||result.event.id<=0||
+        result.event.action!==payload.action))
         throw new Error('The publication response could not be confirmed.');
       setPending(null);setReviewedAction(false);
       if(kind==='review'){
@@ -98,8 +81,7 @@ export default function PublicationReviewPanel({claimId,analysisVersionId,report
           dtoSha256:payload.expectedDtoSha256}:null);
       } else setApprovedBinding(null);
       if(kind==='action')setActionReason('');
-      if(kind==='retraction')setRetractionReason('');
-      setNotice(`${kind==='review'?'Review':kind==='action'?'Publication action':'Retraction'} recorded. Refreshing state.`);
+      setNotice(`${kind==='review'?'Review':'Publication action'} recorded. Refreshing state.`);
       refresh();
     } catch(reason) {
       setError(reason);
@@ -110,13 +92,11 @@ export default function PublicationReviewPanel({claimId,analysisVersionId,report
   function dispatch(kind,makePayload){
     if(busy)return;
     if((kind==='review'&&(!headVersionKnown||!headConsistent||sameVersionActive))||
-      (kind==='action'&&!canAct)||
-      (kind==='retraction'&&(!headState?.isPublicationOwner||!active)))return;
+      (kind==='action'&&!canAct))return;
     let payload;
     try {payload=pending?.kind===kind?pending.payload:makePayload();}
     catch(reason){setError(reason);return;}
     if(kind==='action'&&!window.confirm(`${payload.action==='correct'?'Correct':'Publish'} claim ${claimId} using analysis version ${analysisVersionId}? This creates a public publication event.`))return;
-    if(kind==='retraction'&&!window.confirm(`Retract active publication for claim ${claimId}? This creates a public invalidation event.`))return;
     submit(kind,payload);
   }
   function changed(kind){if(pending?.kind===kind)setPending(null);}
@@ -164,12 +144,6 @@ export default function PublicationReviewPanel({claimId,analysisVersionId,report
         </fieldset>
       </form>
     </>}
-    {headState?.isPublicationOwner&&active&&<form className="publication-retraction" onSubmit={event=>{event.preventDefault();if(cleanReason(retractionReason))dispatch('retraction',retractionPayload);}}>
-      <fieldset disabled={busy||loading}><legend>Retract active publication</legend>
-        <p>This invalidates the active public generation for the claim.</p>
-        <div className="research-field"><label htmlFor={`${prefix}-retraction-reason`}>Retraction reason</label><textarea id={`${prefix}-retraction-reason`} value={retractionReason} maxLength="500" required rows="3" onChange={event=>{setRetractionReason(event.target.value);changed('retraction');}}/></div>
-        <button type="submit" disabled={!cleanReason(retractionReason)}>{pending?.kind==='retraction'?'Retry same retraction':'Retract publication'}</button>
-      </fieldset>
-    </form>}
+    {showRetraction&&<PublicationRetractionPanel claimId={claimId} onChanged={refresh}/>}
   </section>;
 }

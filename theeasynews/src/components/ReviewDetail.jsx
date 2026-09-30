@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Link,useParams} from 'react-router-dom';
 import {apiRequest} from '../api';
 import PublicationReviewPanel from './PublicationReviewPanel';
+import PublicationRetractionPanel from './PublicationRetractionPanel';
 import PdfPageReview from './PdfPageReview';
 
 function SourceComparison({passage,draft}){
@@ -61,7 +62,9 @@ function JobGuidance({job}){
 }
 
 export default function ReviewDetail(){
-  const {versionId}=useParams();
+  const {claimId:routeClaimId,versionId}=useParams();
+  const claimForRetraction=/^[1-9]\d*$/.test(routeClaimId||'')&&Number.isSafeInteger(Number(routeClaimId))?
+    Number(routeClaimId):null;
   const citationReturn=useRef(null);
   const [selectedPassageId,setSelectedPassageId]=useState(null);
   function openPassage(event,passageId){
@@ -72,11 +75,15 @@ export default function ReviewDetail(){
   }
   const [data,setData]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[revision,setRevision]=useState(0);
   useEffect(()=>{
-    if(!/^[1-9]\d*$/.test(versionId)){setError('Invalid analysis version.');setLoading(false);return;}
+    if(!/^[1-9]\d*$/.test(versionId)||!Number.isSafeInteger(Number(versionId))||
+      (routeClaimId!==undefined&&!claimForRetraction)){
+      setError('Invalid review address.');setLoading(false);return;
+    }
     const controller=new AbortController();setLoading(true);setError('');setData(null);setSelectedPassageId(null);
     (async()=>{
       const version=await apiRequest(`/api/v1/editor/analysis-versions/${versionId}`,{signal:controller.signal});
       const claimId=version.version.claimId;
+      if(claimForRetraction&&claimId!==claimForRetraction)throw new Error('Review address does not match version');
       const results=await Promise.allSettled([
         apiRequest(`/api/v1/editor/claims/${claimId}/evidence-packet`,{signal:controller.signal}),
         apiRequest(`/api/v1/editor/analysis-versions/${versionId}/verification-jobs`,{signal:controller.signal}),
@@ -91,7 +98,7 @@ export default function ReviewDetail(){
     })().catch(()=>{if(!controller.signal.aborted)setError('Could not load saved review records.');})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return ()=>controller.abort();
-  },[versionId,revision]);
+  },[versionId,claimForRetraction,routeClaimId,revision]);
   const passages=data?.packet?.passages||[];
   const citations=data?.version?.draft?.citations||[];
   const job=data?.detail?.job,report=data?.detail?.report;
@@ -121,7 +128,9 @@ export default function ReviewDetail(){
       </section>
       <section aria-label="Publication history"><h2>Publication history</h2>{data.history?.items?.length?<ol>{data.history.items.map(event=><li key={event.id}>{event.action} · {new Date(event.occurredAtMs).toLocaleString()} · generation {event.generation}</li>)}</ol>:<p>{data.history?'No publication events.':'Publication history unavailable.'}</p>}</section>
       {data.packet&&job?.state==='done'&&report?.metadata?.id&&<PublicationReviewPanel claimId={data.version.version.claimId}
-        analysisVersionId={Number(versionId)} reportId={report.metadata.id} report={report.report}/>}
+        analysisVersionId={Number(versionId)} reportId={report.metadata.id} report={report.report} showRetraction={false}/>}
     </>}
+    {(claimForRetraction||data?.version?.version?.claimId)&&<PublicationRetractionPanel
+      claimId={claimForRetraction||data.version.version.claimId} onChanged={()=>setRevision(value=>value+1)}/>}
   </div></div>;
 }
