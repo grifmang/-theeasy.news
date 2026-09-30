@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-news.local/evals/labels.schema.json",
+  "title": "Easy News pilot claim-passage reference labels v1",
+  "description": "Metadata only. No claim wording, passage text, reviewer rationale, names, URLs or restricted source material belongs in this file or the checked-in manifest. Values are independent human adjudications, never model confidence.",
+  "type": "array",
+  "maxItems": 100000,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["caseId", "relevance", "relation", "evidence_type", "criticalCounterevidence", "criticalCase", "reviewers", "adjudication"],
+    "properties": {
+      "caseId": {"$ref": "#/$defs/id"},
+      "relevance": {"enum": ["direct", "background", "unrelated", "uncertain"]},
+      "relation": {"enum": ["supports", "contradicts", "mentions_only", "insufficient"]},
+      "evidence_type": {"enum": ["mention", "allegation", "testimony", "finding", "other", "uncertain"]},
+      "criticalCounterevidence": {"type": "boolean"},
+      "criticalCase": {"type": "boolean"},
+      "reviewers": {
+        "type": "array", "minItems": 2, "maxItems": 2,
+        "items": {"type": "object", "additionalProperties": false,
+          "required": ["id", "reviewMinutes", "labelSha256"],
+          "properties": {"id": {"$ref": "#/$defs/id"}, "reviewMinutes": {"type": "integer", "minimum": 0, "maximum": 10000},
+            "labelSha256": {"$ref": "#/$defs/sha256"}}}
+      },
+      "adjudication": {
+        "type": "object", "additionalProperties": false,
+        "required": ["status", "reviewerId", "reviewMinutes", "disagreement"],
+        "properties": {"status": {"enum": ["agreed", "adjudicated", "unresolved"]},
+          "reviewerId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+          "reviewMinutes": {"type": "integer", "minimum": 0, "maximum": 10000},
+          "disagreement": {"type": "boolean"}}
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

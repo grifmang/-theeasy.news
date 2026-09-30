@@ -18,13 +18,14 @@ const Login = ({ onLogin }) => {
 
     if (!username.trim()) { setError('Username is required'); return; }
     if (!password) { setError('Password is required'); return; }
-    if (isRegister && password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (isRegister && password.length < 12) { setError('Password must be at least 12 characters'); return; }
 
     setSubmitting(true);
     try {
       const endpoint = isRegister ? '/api/register' : '/api/login';
       const res = await fetch(`${API}${endpoint}`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password })
       });
@@ -35,9 +36,7 @@ const Login = ({ onLogin }) => {
         return;
       }
       if (data.userId) {
-        localStorage.setItem('userId', data.userId);
-        if (data.token) localStorage.setItem('token', data.token);
-        onLogin(data.userId);
+        onLogin(data);
         navigate('/');
       }
     } catch {
@@ -51,14 +50,13 @@ const Login = ({ onLogin }) => {
     try {
       const res = await fetch(`${API}/api/google-login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: cred.credential })
       });
       const data = await res.json();
       if (res.ok && data.userId) {
-        localStorage.setItem('userId', data.userId);
-        if (data.token) localStorage.setItem('token', data.token);
-        onLogin(data.userId);
+        onLogin(data);
         navigate('/');
       } else {
         setError(data.error || 'Google login failed');

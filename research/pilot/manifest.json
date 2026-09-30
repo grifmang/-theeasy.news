@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "status": "incomplete",
+  "corpusId": "pilot-development-v1",
+  "corpusSha256": null,
+  "labelsSha256": null,
+  "eligibility": {"version": "pilot-eligibility-v1", "registrySha256": null},
+  "exclusions": [],
+  "evidenceCutoffAt": null,
+  "reviewProtocol": {"version": "blind-two-reviewer-v1", "blinding": "model-identity-and-output", "sha256": null},
+  "retrievalConfig": {"version": "retrieval-v1", "sha256": null, "cutoff": 30},
+  "claims": [],
+  "documents": [],
+  "cases": [],
+  "labels": []
+}

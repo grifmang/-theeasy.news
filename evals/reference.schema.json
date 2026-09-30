@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-news.local/evals/reference.schema.json",
+  "title": "Easy News independent whole-case accuracy rows v1",
+  "description": "Restricted labels and evidence remain outside git. A missing output is null and remains a scored failure. One row is permitted per independently selected claim family.",
+  "type": "array",
+  "maxItems": 100000,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["familyId", "referenceLabel", "outputLabel", "dimensions", "criticalErrors", "referenceResolvable"],
+    "properties": {
+      "familyId": {"$ref": "#/$defs/id"},
+      "referenceLabel": {"$ref": "#/$defs/label"},
+      "outputLabel": {"oneOf": [{"$ref": "#/$defs/label"}, {"type": "null"}]},
+      "referenceResolvable": {"type": "boolean"},
+      "dimensions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["disposition", "identityTimeScope", "evidenceCompleteness", "citationMeaningAttribution", "uncertainty"],
+        "properties": {
+          "disposition": {"type": "boolean"},
+          "identityTimeScope": {"type": "boolean"},
+          "evidenceCompleteness": {"type": "boolean"},
+          "citationMeaningAttribution": {"type": "boolean"},
+          "uncertainty": {"type": "boolean"}
+        }
+      },
+      "criticalErrors": {
+        "type": "array",
+        "uniqueItems": true,
+        "maxItems": 7,
+        "items": {"enum": ["fabricated_evidence", "incorrect_person_linkage", "material_quote_reversal", "allegation_promoted_to_finding", "decisive_counterevidence_omitted", "archive_time_leakage", "protected_identity_exposed"]}
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "label": {"enum": ["supported", "contradicted", "mixed", "insufficient_evidence", "not_fact_checkable"]}
+  }
+}

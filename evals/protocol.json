@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "status": "incomplete",
+  "scope": null,
+  "eligibleRegistrySha256": null,
+  "familyAssignmentSha256": null,
+  "sampleSha256": null,
+  "referenceLabelsSha256": null,
+  "evidenceCutoffAt": null,
+  "reviewProtocolSha256": null,
+  "candidateConfigurationSha256": null,
+  "requiredIndependentFamilies": 200,
+  "minimumPerDisposition": 20,
+  "criticalChallengeCases": 50,
+  "thresholds": {
+    "observedAccuracy": 0.95,
+    "wilsonLowerBound": 0.90,
+    "macroAccuracy": 0.90,
+    "correctResolutionCoverage": 0.70,
+    "criticalErrors": 0
+  },
+  "runs": ["unedited_automation", "human_reviewed_publication"],
+  "notes": [
+    "This checked-in file records requirements only and is not release evidence.",
+    "Restricted cases, labels, reviewer identities, rationales and evidence stay outside git.",
+    "Set status complete only after preregistration and independent review artifacts are frozen."
+  ]
+}

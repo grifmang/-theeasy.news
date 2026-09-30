@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "status": "incomplete",
+  "manifestSha256": null,
+  "ratios": {"train": 60, "validation": 20, "test": 20},
+  "assignments": {"train": [], "validation": [], "test": []}
+}

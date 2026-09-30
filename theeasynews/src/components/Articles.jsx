@@ -1,3 +1,4 @@
+import {apiRequest} from '../api';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, TelegramShareButton, LinkedinShareButton } from 'react-share';
@@ -57,15 +58,10 @@ const Articles = ({ userId }) => {
 
   const save = async (articleId) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API}/api/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ userId, articleId })
-      });
+      await apiRequest('/api/save', {method:'POST',body:{articleId}});
       setSavedIds(prev => new Set(prev).add(articleId));
     } catch {
-      // save failed silently
+      setError('Unable to save article. Please sign in again or retry.');
     }
   };
 

@@ -1,0 +1,38 @@
+# Default-deny build context. Database/original bytes, credentials, dependencies,
+# fixtures and local artifacts must not be sent to a remote image builder.
+**
+!.dockerignore
+!package.json
+!package-lock.json
+!release-manifest.json
+!*.js
+!analysis/
+!analysis/**
+!discovery/
+!discovery/**
+!evidence/
+!evidence/**
+!migrations/
+!migrations/**
+!models/
+!models/**
+!ops/
+!ops/**
+!publication/
+!publication/**
+!retrieval/
+!retrieval/**
+!routes/
+!routes/**
+# Transitional Nixpacks maintenance build generates this directory remotely.
+# It is not uploaded by .railwayignore or copied by the final Dockerfile.
+!.nixpacks/
+!.nixpacks/**
+**/.env*
+**/*.db
+**/*.db-*
+**/*.sqlite*
+**/*.pem
+**/*.key
+**/node_modules
+**/__tests__

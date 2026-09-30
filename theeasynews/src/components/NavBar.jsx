@@ -45,6 +45,7 @@ const NavBar = ({ userId, onLogout }) => {
         {userId ? (
           <>
             <Link to="/saved" className={location.pathname === '/saved' ? 'active' : ''}>Saved</Link>
+            <Link to="/editor" className={location.pathname === '/editor' ? 'active' : ''}>Research desk</Link>
             <button className="btn-logout" onClick={onLogout}>Logout</button>
           </>
         ) : (

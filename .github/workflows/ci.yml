@@ -1,0 +1,203 @@
+name: Verify release candidate
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, 'codex/**']
+  workflow_dispatch:
+
+# Never use pull_request_target or production credentials to execute PR code.
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      GENERATION_ENABLED: 'false'
+      CLASSIFICATION_ENABLED: 'false'
+      INGESTION_ENABLED: 'false'
+      AUTO_PUBLISH_ENABLED: 'false'
+      HTML_EXTRACTION_ENABLED: 'false'
+      DAILY_BUDGET_MICROS: '0'
+      MONTHLY_BUDGET_MICROS: '0'
+    steps:
+      - name: Check out source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install pinned secret scanner and scan source/history
+        run: |
+          mkdir "$RUNNER_TEMP/security-tools"
+          GOBIN="$RUNNER_TEMP/security-tools" go install github.com/zricethezav/gitleaks/v8@v8.24.3
+          "$RUNNER_TEMP/security-tools/gitleaks" git --redact=100 --no-banner --ignore-gitleaks-allow --log-opts="--all" .
+          "$RUNNER_TEMP/security-tools/gitleaks" dir --redact=100 --no-banner --ignore-gitleaks-allow .
+
+      - name: Pinned application Node runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.1'
+          package-manager-cache: false
+
+      - name: Install locked dependencies
+        run: |
+          npm ci --prefix server --no-audit --no-fund
+          npm ci --prefix theeasynews --no-audit --no-fund
+
+      - name: Dependency advisory gates
+        run: |
+          npm audit --prefix server --omit=dev --audit-level=high
+          npm audit --prefix theeasynews --audit-level=high
+
+      - name: Backend and UI regression gates
+        run: |
+          npm test --prefix server -- --runInBand
+          npm test --prefix theeasynews
+          npm run test:lint --prefix theeasynews
+          npm run test:config --prefix theeasynews
+          npm run test:build --prefix theeasynews
+
+      - name: Build frontend (test configuration, not a deploy artifact)
+        env:
+          REACT_APP_API_URL: ''
+          REACT_APP_GOOGLE_CLIENT_ID: 'ci-public-placeholder'
+        run: npm run build --prefix theeasynews
+
+      - name: Assemble and pin source bundle
+        id: bundle
+        run: |
+          node server/ops/stage-release.js stage "$GITHUB_WORKSPACE/server" "$RUNNER_TEMP/release" > "$RUNNER_TEMP/release-record.json"
+          node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/release-record.json"));fs.appendFileSync(process.env.GITHUB_OUTPUT,"digest="+r.manifestSha256+"\n");'
+
+      - name: Build only from the verified bundle
+        id: image
+        env:
+          BUNDLE_DIGEST: ${{ steps.bundle.outputs.digest }}
+        run: |
+          mkdir "$RUNNER_TEMP/evidence"
+          node server/ops/build-release-image.js "$RUNNER_TEMP/release" "$BUNDLE_DIGEST" \
+            easy-news:ci easy-news:ci-toolchain "$RUNNER_TEMP/evidence/source-bundle.tar" \
+            > "$RUNNER_TEMP/image-record.json"
+          node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/image-record.json"));fs.appendFileSync(process.env.GITHUB_OUTPUT,"id="+r.imageId+"\ntoolchainId="+r.toolchainId+"\nsourceTarSha256="+r.sourceTarSha256+"\n");'
+
+      - name: Scan generated release source and browser assets
+        run: |
+          "$RUNNER_TEMP/security-tools/gitleaks" dir --redact=100 --no-banner --ignore-gitleaks-allow "$RUNNER_TEMP/release"
+          "$RUNNER_TEMP/security-tools/gitleaks" dir --redact=100 --no-banner --ignore-gitleaks-allow theeasynews/build
+
+      - name: Real isolated container extraction and shutdown
+        env:
+          IMAGE_ID: ${{ steps.image.outputs.id }}
+        run: |
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges "$IMAGE_ID" node ops/check-parser-runtime.js /opt/easy-parser /opt/easy-parser.sha256 /tmp/easy-html
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges "$IMAGE_ID" node ops/check-pdf-runtime.js /opt/easy-pdf /opt/easy-pdf.sha256 /tmp/easy-pdf-scratch
+          mkdir "$RUNNER_TEMP/container-smoke-data"
+          sudo chown 1000:1000 "$RUNNER_TEMP/container-smoke-data"
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --env SMOKE_ROOT=/smoke-data \
+            --mount "type=bind,source=$RUNNER_TEMP/container-smoke-data,target=/smoke-data" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/server/test-support/container-smoke.js,target=/smoke.js,readonly" \
+            "$IMAGE_ID" node /smoke.js
+
+      - name: Exact image PID 1 and SIGTERM gate
+        env:
+          IMAGE_ID: ${{ steps.image.outputs.id }}
+        run: |
+          set -euo pipefail
+          data="$RUNNER_TEMP/pid1-data"
+          name="easy-news-ci-pid1-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir "$data"
+          sudo chown 1000:1000 "$data"
+          cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777 \
+            --mount "type=bind,source=$data,target=/data" \
+            "$IMAGE_ID" node init-db.js /data/easy-news.db
+          docker run -d --name "$name" --network none --cap-drop ALL \
+            --security-opt no-new-privileges --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777 \
+            --mount "type=bind,source=$data,target=/data" \
+            --env NODE_ENV=production --env DEPLOYMENT_ENV=staging \
+            --env DB_PATH=/data/easy-news.db --env PORT=4000 \
+            --env GENERATION_ENABLED=false --env INGESTION_ENABLED=false \
+            --env HTML_EXTRACTION_ENABLED=false --env PDF_EXTRACTION_ENABLED=false \
+            --env CLASSIFICATION_ENABLED=false --env ANALYSIS_VERIFICATION_ENABLED=false \
+            --env PUBLICATION_EXPORT_ENABLED=false --env AUTO_PUBLISH_ENABLED=false \
+            "$IMAGE_ID" >/dev/null
+          ready=false
+          for _ in $(seq 1 40); do
+            if docker exec "$name" node -e \
+              "Promise.all(['/health/live','/health/ready'].map(async p=>{const r=await fetch('http://127.0.0.1:4000'+p);if(r.status!==200)throw Error()})).catch(()=>process.exit(2))"; then
+              ready=true
+              break
+            fi
+            sleep 0.25
+          done
+          test "$ready" = true
+          docker exec "$name" node -e '
+            const fs=require("fs");
+            const cmd=fs.readFileSync("/proc/1/cmdline").toString().split("\0").filter(Boolean);
+            const status=Object.fromEntries(fs.readFileSync("/proc/1/status","utf8").split("\n")
+              .map(line=>line.split(/:\s*/,2)).filter(parts=>parts.length===2));
+            if(JSON.stringify(cmd)!==JSON.stringify(["node","index.js"])||status.Pid!=="1"||
+              status.PPid!=="0"||!status.Uid.startsWith("1000\t")||!status.Gid.startsWith("1000\t")||
+              status.CapEff!=="0000000000000000"||status.NoNewPrivs!=="1")process.exit(2);'
+          docker stop --time 15 "$name" >/dev/null
+          docker inspect "$name" > "$RUNNER_TEMP/pid1-state.json"
+          PID1_STATE="$RUNNER_TEMP/pid1-state.json" node -e '
+            const state=require(process.env.PID1_STATE)[0].State;
+            if(state.Running||state.ExitCode!==0||state.OOMKilled||state.Error)process.exit(2);'
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777 \
+            --mount "type=bind,source=$data,target=/data" --entrypoint node "$IMAGE_ID" -e '
+              const D=require("better-sqlite3");
+              const db=new D("/data/easy-news.db",{readonly:true,fileMustExist:true});
+              const version=db.prepare("SELECT MAX(version) v FROM rebuild_migrations").get().v;
+              const integrity=db.pragma("integrity_check",{simple:true});
+              const foreignKeys=db.pragma("foreign_key_check").length;
+              db.close();
+              if(version!==33||integrity!=="ok"||foreignKeys!==0)process.exit(2);'
+
+      - name: Existing native sandbox adversarial checks
+        env:
+          TOOLCHAIN_ID: ${{ steps.image.outputs.toolchainId }}
+        run: |
+          docker run --rm --network none --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --mount "type=bind,source=$GITHUB_WORKSPACE/server/test-support,target=/app/test-support,readonly" "$TOOLCHAIN_ID" python3 /app/test-support/sandbox-tests.py
+          # The optional Node-archive scenario is skipped here. The release-image
+          # preflight/HTTP smoke above is separate evidence, not equivalent coverage.
+
+      - name: Retain tested image and source evidence
+        env:
+          BUNDLE_DIGEST: ${{ steps.bundle.outputs.digest }}
+          IMAGE_ID: ${{ steps.image.outputs.id }}
+          SOURCE_TAR_SHA256: ${{ steps.image.outputs.sourceTarSha256 }}
+        run: |
+          printf '%s  %s\n' "$SOURCE_TAR_SHA256" "$RUNNER_TEMP/evidence/source-bundle.tar" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/archive-check"
+          tar -xf "$RUNNER_TEMP/evidence/source-bundle.tar" -C "$RUNNER_TEMP/archive-check"
+          node server/ops/stage-release.js verify "$RUNNER_TEMP/archive-check" "$BUNDLE_DIGEST"
+          printf '%s\n' "$IMAGE_ID" > "$RUNNER_TEMP/evidence/image-id.txt"
+          docker save "$IMAGE_ID" | gzip > "$RUNNER_TEMP/evidence/tested-image.tar.gz"
+          cp "$RUNNER_TEMP/release-record.json" "$RUNNER_TEMP/evidence/source-record.json"
+          cp "$RUNNER_TEMP/image-record.json" "$RUNNER_TEMP/evidence/image-record.json"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/evidence/commit.txt"
+          cd "$RUNNER_TEMP/evidence"
+          sha256sum source-bundle.tar tested-image.tar.gz > SHA256SUMS
+
+      - name: Upload short-lived release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tested-release-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0

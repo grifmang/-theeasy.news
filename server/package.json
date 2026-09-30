@@ -4,12 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "backup-db": "node ops/backup-only.js",
+    "init-db": "node init-db.js",
+    "provision-editor": "node provision-editor.js",
+    "provision-publication-owner": "node provision-publication-owner.js",
+    "import-research": "node import-research.js",
+    "migrate": "node migrate.js",
     "test": "jest",
     "scrape": "node scrape.js",
-    "generate": "node generate.js",
+    "generate:legacy": "node generate.js",
     "seed-authors": "node seed-authors.js",
     "start": "node index.js",
-    "schedule": "node scheduler.js"
+    "schedule": "node scheduler.js",
+    "validate-pilot": "node evals/validate.js",
+    "validate-candidates": "node evals/validate-candidates.js"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +33,12 @@
     "google-auth-library": "^9.0.0",
     "node-cron": "^3.0.2",
     "openai": "^4.18.0",
+    "parse5": "8.0.1",
     "rss-parser": "^3.12.0"
+  },
+  "overrides": {
+    "gaxios": { "uuid": "11.1.1" },
+    "node-cron": { "uuid": "11.1.1" }
   },
   "devDependencies": {
     "jest": "^29.7.0"

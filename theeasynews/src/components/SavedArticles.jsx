@@ -18,9 +18,8 @@ const SavedArticles = ({ userId }) => {
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
     setLoading(true);
-    const token = localStorage.getItem('token');
     fetch(`${API}/api/user/${userId}/saved`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
+      credentials: 'include'
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to load saved articles');
@@ -63,7 +62,7 @@ const SavedArticles = ({ userId }) => {
       {articles.length === 0 ? (
         <div className="empty-state">
           <h3>No saved articles yet</h3>
-          <p>Browse articles and click "Save" to bookmark them here.</p>
+          <p>Browse articles and click &quot;Save&quot; to bookmark them here.</p>
           <Link to="/" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block', textDecoration: 'none' }}>Browse Articles</Link>
         </div>
       ) : (
