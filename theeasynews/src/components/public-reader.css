@@ -141,3 +141,5 @@
 }
 .review-json { max-height: 28rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 1rem; background: #f5f3ee; border: 1px solid #d6d2c8; }
 .source-card:focus, [id^="review-passage-"]:focus { outline: 3px solid #305a75; outline-offset: 3px; }
+.review-compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.review-compare-grid > div { min-width: 0; overflow-wrap: anywhere; padding: 1rem; border: 1px solid #d6d2c8; background: #f5f3ee; }

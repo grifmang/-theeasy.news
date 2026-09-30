@@ -5,8 +5,8 @@ const {getClaimState}=require('../research-lifecycle');
 
 const PUBLIC_CACHE='public, max-age=0, must-revalidate';
 const PRIVATE_CACHE='private, no-store';
-const TARGETS=['public_index','static_snapshot','cache','document_preview'];
 const MAX_SCAN=1000;
+const HISTORY_PAGE=20;
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const id=value=>typeof value==='string'&&/^[1-9]\d*$/.test(value)&&Number.isSafeInteger(Number(value))?Number(value):null;
 const error=(res,status,code)=>res.set('Cache-Control','no-store').status(status).json({error:{code}});
@@ -77,6 +77,19 @@ function respond(req,res,body){
 
 // A head is readable only when its current generation is installed at every
 // private export target. Older receipts and pending desired state never qualify.
+const installedProof=`(SELECT COUNT(*) FROM publication_delivery_tasks t
+      JOIN publication_delivery_receipts r ON r.task_id=t.id AND r.outbox_id=o.id
+        AND r.target=t.target AND r.claim_id=e.claim_id AND r.generation=e.generation
+        AND r.action='activate' AND r.dto_sha256=s.dto_sha256
+        AND r.outcome IN ('applied','replayed') AND r.applied_generation=e.generation
+        AND r.artifact_sha256=s.dto_sha256 AND r.artifact_size=length(CAST(s.dto_json AS BLOB))
+        AND r.manifest_sha256 IS NOT NULL
+      JOIN publication_sinks sink ON sink.sink_id=r.sink_id AND sink.singleton=1
+      WHERE t.outbox_id=o.id AND t.generation=e.generation AND t.state='done'
+        AND t.target IN ('public_index','static_snapshot','cache','document_preview'))=4
+    AND (SELECT COUNT(*) FROM publication_delivery_tasks t WHERE t.outbox_id=o.id)=4
+    AND (SELECT COUNT(DISTINCT r.sink_id) FROM publication_delivery_receipts r
+      WHERE r.outbox_id=o.id)=1`;
 const visible=`FROM publication_manifest_heads h
   JOIN publication_snapshots s ON s.id=h.snapshot_id AND s.claim_id=h.claim_id
     AND s.dto_sha256=h.dto_sha256
@@ -93,19 +106,7 @@ const visible=`FROM publication_manifest_heads h
     SELECT MAX(latest_review.id) FROM publication_review_events latest_review
     WHERE latest_review.analysis_version_id=v.id) AND
     EXISTS(SELECT 1 FROM publication_dependencies d WHERE d.snapshot_id=s.id) AND
-    (SELECT COUNT(*) FROM publication_delivery_tasks t
-      JOIN publication_delivery_receipts r ON r.task_id=t.id AND r.outbox_id=o.id
-        AND r.target=t.target AND r.claim_id=h.claim_id AND r.generation=h.generation
-        AND r.action='activate' AND r.dto_sha256=h.dto_sha256
-        AND r.outcome IN ('applied','replayed') AND r.applied_generation=h.generation
-        AND r.artifact_sha256=h.dto_sha256 AND r.artifact_size=length(CAST(s.dto_json AS BLOB))
-        AND r.manifest_sha256 IS NOT NULL
-      JOIN publication_sinks sink ON sink.sink_id=r.sink_id AND sink.singleton=1
-      WHERE t.outbox_id=o.id AND t.generation=h.generation AND t.state='done'
-        AND t.target IN ('public_index','static_snapshot','cache','document_preview'))=4
-    AND (SELECT COUNT(*) FROM publication_delivery_tasks t WHERE t.outbox_id=o.id)=4
-    AND (SELECT COUNT(DISTINCT r.sink_id) FROM publication_delivery_receipts r
-      WHERE r.outbox_id=o.id)=1`;
+    ${installedProof}`;
 const select=`SELECT h.claim_id,s.id snapshot_id,s.analysis_version_id,s.dto_json,s.dto_sha256,
   topic.id topic_id ${visible}`;
 function visibleAnalysis(db,claimId){
@@ -113,13 +114,37 @@ function visibleAnalysis(db,claimId){
   const dto=publicDto(db,row);
   return dto?{row,dto}:null;
 }
-function chronology(db,claimId){
-  const rows=db.prepare(`SELECT e.action,e.occurred_at_ms
-    FROM publication_events e
-    WHERE e.claim_id=? ORDER BY e.generation LIMIT 100`).all(claimId);
-  return rows.filter(row=>['publish','correct'].includes(row.action)&&
-    Number.isSafeInteger(row.occurred_at_ms)&&row.occurred_at_ms>=0).map(row=>({
-    type:row.action==='publish'?'publication':'correction',occurredAtMs:row.occurred_at_ms}));
+const installedHistory=`FROM publication_events e
+  JOIN publication_snapshots s ON s.id=e.snapshot_id AND s.claim_id=e.claim_id
+  JOIN analysis_versions v ON v.id=s.analysis_version_id AND v.claim_id=e.claim_id
+  JOIN publication_review_events rev ON rev.id=s.review_event_id AND rev.analysis_version_id=v.id
+    AND rev.decision='approved' AND rev.dto_sha256=s.dto_sha256
+  JOIN publication_outbox o ON o.claim_id=e.claim_id AND o.generation=e.generation
+    AND o.event_id=e.id AND o.action='activate' AND o.dto_sha256=s.dto_sha256
+  WHERE e.action IN ('publish','correct') AND
+    EXISTS(SELECT 1 FROM publication_dependencies d WHERE d.snapshot_id=s.id) AND
+    ${installedProof}`;
+function chronologyPage(db,claimId,after=0){
+  const rows=db.prepare(`SELECT e.generation,e.action,e.occurred_at_ms,s.analysis_version_id,
+    s.claim_id,s.dto_json,s.dto_sha256 ${installedHistory}
+    AND e.claim_id=? AND e.generation>? ORDER BY e.generation LIMIT ?`)
+    .iterate(claimId,after,MAX_SCAN+1);
+  const valid=[];let scanned=0,lastSeen=after;
+  for(const row of rows){scanned++;if(scanned>MAX_SCAN)break;lastSeen=row.generation;
+    if(dtoFrom(row))valid.push(row);
+    if(valid.length>HISTORY_PAGE)break;
+  }
+  const page=valid.slice(0,HISTORY_PAGE);
+  return {items:page.map(row=>({type:row.action==='publish'?'publication':'correction',
+    occurredAtMs:row.occurred_at_ms})),nextAfter:valid.length>HISTORY_PAGE?page.at(-1).generation:
+      scanned>MAX_SCAN?lastSeen:null};
+}
+function latestInstalledCorrection(db,claimId){
+  const rows=db.prepare(`SELECT e.occurred_at_ms,s.analysis_version_id,s.claim_id,s.dto_json,s.dto_sha256
+    ${installedHistory} AND e.claim_id=? AND e.action='correct'
+    ORDER BY e.generation DESC LIMIT ?`).iterate(claimId,MAX_SCAN);
+  for(const row of rows)if(dtoFrom(row))return row.occurred_at_ms;
+  return null;
 }
 
 function createPublicRouter(db){
@@ -129,12 +154,13 @@ function createPublicRouter(db){
     const items=[];
     for(const row of db.prepare(`${select} ORDER BY h.claim_id LIMIT ?`).iterate(MAX_SCAN)){
       const dto=publicDto(db,row);if(!dto)continue;
-      const events=chronology(db,row.claim_id).filter(event=>event.type==='correction');
-      if(events.length)items.push({claimId:dto.claimId,title:dto.title,
-        analysisSlug:`analysis-${dto.analysisVersionId}`,latestCorrectionAtMs:events.at(-1).occurredAtMs});
-      if(items.length>=p.offset+p.pageSize)break;
+      const latestCorrectionAtMs=latestInstalledCorrection(db,row.claim_id);
+      if(latestCorrectionAtMs!==null)items.push({claimId:dto.claimId,title:dto.title,
+        analysisSlug:`analysis-${dto.analysisVersionId}`,latestCorrectionAtMs});
+      if(items.length>=p.offset+p.pageSize+1)break;
     }
-    return respond(req,res,{items:items.slice(p.offset),page:p.page,pageSize:p.pageSize});
+    return respond(req,res,{items:items.slice(p.offset,p.offset+p.pageSize),page:p.page,
+      pageSize:p.pageSize,nextPage:items.length>p.offset+p.pageSize&&p.offset+p.pageSize<MAX_SCAN?p.page+1:null});
   });
   router.get('/topics',(req,res)=>{
     const p=pagination(req,res);if(!p)return;
@@ -168,15 +194,25 @@ function createPublicRouter(db){
   router.get('/claims/:id',(req,res)=>{
     const claimId=id(req.params.id);if(!claimId)return error(res,400,'invalid_id');
     const visible=visibleAnalysis(db,claimId);
+    const history=visible?chronologyPage(db,claimId):null;
     return visible?respond(req,res,{claim:visible.dto,analysisSlug:`analysis-${visible.dto.analysisVersionId}`,
-      chronology:chronology(db,claimId)}):error(res,404,'not_found');
+      chronology:history.items,chronologyNextAfter:history.nextAfter}):error(res,404,'not_found');
+  });
+  router.get('/claims/:id/chronology',(req,res)=>{
+    const claimId=id(req.params.id);if(!claimId)return error(res,400,'invalid_id');
+    if(Object.keys(req.query).some(key=>key!=='after'))return error(res,400,'invalid_cursor');
+    const after=req.query.after===undefined?0:id(req.query.after);
+    if(after===null)return error(res,400,'invalid_cursor');
+    if(!visibleAnalysis(db,claimId))return error(res,404,'not_found');
+    return respond(req,res,chronologyPage(db,claimId,after));
   });
   router.get('/analyses/:slug',(req,res)=>{
     const match=/^analysis-([1-9]\d*)$/.exec(req.params.slug),versionId=match&&id(match[1]);
     if(!versionId)return error(res,400,'invalid_slug');
     const row=db.prepare(`${select} AND s.analysis_version_id=?`).get(versionId),dto=publicDto(db,row);
+    const history=dto?chronologyPage(db,dto.claimId):null;
     return dto?respond(req,res,{analysis:dto,slug:`analysis-${versionId}`,
-      chronology:chronology(db,dto.claimId)}):error(res,404,'not_found');
+      chronology:history.items,chronologyNextAfter:history.nextAfter}):error(res,404,'not_found');
   });
   router.get('/search',(req,res)=>{
     const p=pagination(req,res);if(!p)return;

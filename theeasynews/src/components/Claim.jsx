@@ -27,7 +27,7 @@ export default function Claim() {
       <header className="reader-page__header"><p className="eyebrow">Claim {String(claim.claimId).padStart(3, '0')}</p><h1>{claim.title}</h1>{claim.attribution && <p className="reader-attribution">Attribution: {claim.attribution}</p>}<p className="reader-deck">This public analysis is a structured account of available evidence. It does not establish that the claim is true.</p></header>
       <StatusSummary summary={claim.summary} status={claim.status} findingEstablished={claim.findingEstablished} />
       <LimitationsPanel limitations={claim.limitations} />
-      <PublicationChronology events={data.chronology}/>
+      <PublicationChronology events={data.chronology} claimId={claim.claimId} nextAfter={data.chronologyNextAfter}/>
       <section className="reader-next" aria-labelledby="analysis-link-title"><div><p className="eyebrow">Continue reading</p><h2 id="analysis-link-title">Evidence, interpretation, and sources</h2><p>Review how the published analysis separates cited material from inference and identifies limitations.</p></div><Link className="reader-button reader-button--link" to={`/analyses/${data.analysisSlug}`}>Read full analysis <span aria-hidden="true">→</span></Link></section>
     </article>}
   </div></div>;

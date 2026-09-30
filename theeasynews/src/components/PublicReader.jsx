@@ -1,5 +1,6 @@
-import React, { useId } from 'react';
+import React, { useEffect,useId,useState } from 'react';
 import { Link } from 'react-router-dom';
+import {apiRequest} from '../api';
 
 export function RequestState({ loading, error, onRetry, notFound = false }) {
   if (loading) return <div className="reader-state" role="status" aria-live="polite">Loading public research…</div>;
@@ -42,12 +43,25 @@ export function LimitationsPanel({ limitations }) {
   </aside>;
 }
 
-export function PublicationChronology({events=[]}){
+export function PublicationChronology({events=[],claimId,nextAfter=null}){
+  const [shown,setShown]=useState(events),[cursor,setCursor]=useState(nextAfter);
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{setShown(events);setCursor(nextAfter);setError('');},[events,nextAfter,claimId]);
+  async function loadMore(){
+    if(!cursor||busy)return;
+    setBusy(true);setError('');
+    try{const result=await apiRequest(`/api/v1/claims/${claimId}/chronology?after=${cursor}`);
+      setShown(previous=>[...previous,...result.items]);setCursor(result.nextAfter);}
+    catch{setError('Could not load more publication history. Retry.');}
+    finally{setBusy(false);}
+  }
   return <section className="limitations-panel" aria-label="Publication and correction chronology">
     <h2>Publication and correction history</h2>
-    {events.length?<ol>{events.map((event,index)=><li key={`${event.type}-${event.occurredAtMs}-${index}`}>
+    {shown.length?<ol>{shown.map((event,index)=><li key={`${event.type}-${event.occurredAtMs}-${index}`}>
       {event.type==='correction'?'Correction':'Publication'} · <time dateTime={new Date(event.occurredAtMs).toISOString()}>{new Date(event.occurredAtMs).toLocaleDateString()}</time>
     </li>)}</ol>:<p>Publication date unavailable.</p>}
+    {error&&<p role="alert">{error}</p>}
+    {cursor&&<button type="button" disabled={busy} onClick={loadMore}>{busy?'Loading history…':'Load more history'}</button>}
   </section>;
 }
 

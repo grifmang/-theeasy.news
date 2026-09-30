@@ -17,7 +17,7 @@ export default function Analysis({userId}) {
     const controller = new AbortController(); let alive = true;
     setRequest({ key: routeKey, analysis: null, error: null, loading: true });
     apiRequest(`/api/v1/analyses/${encodeURIComponent(slug)}`, { signal: controller.signal })
-      .then(data => { if (alive && !controller.signal.aborted) setRequest({ key: routeKey, analysis: data.analysis, chronology:data.chronology||[], error: null, loading: false }); })
+      .then(data => { if (alive && !controller.signal.aborted) setRequest({ key: routeKey, analysis: data.analysis, chronology:data.chronology||[], chronologyNextAfter:data.chronologyNextAfter??null, error: null, loading: false }); })
       .catch(reason => { if (alive && !controller.signal.aborted && reason.name !== 'AbortError') setRequest({ key: routeKey, analysis: null, error: reason, loading: false }); });
     return () => { alive = false; controller.abort(); };
   }, [slug, routeKey]);
@@ -46,7 +46,7 @@ export default function Analysis({userId}) {
       {userId?<p><button className="reader-button" type="button" onClick={toggleSaved} disabled={saving}>{saved?'Remove from saved research':'Save this analysis'}</button>{saveError&&<span role="alert"> {saveError}</span>}</p>:<p><a href="/login">Sign in to save this analysis</a></p>}
       <EvidencePanel sections={analysis.sections} citations={analysis.citations} />
       <LimitationsPanel limitations={analysis.limitations} />
-      <PublicationChronology events={current.chronology}/>
+      <PublicationChronology events={current.chronology} claimId={analysis.claimId} nextAfter={current.chronologyNextAfter}/>
     </article>}
   </div></div>;
 }
