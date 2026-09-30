@@ -20,7 +20,7 @@ const Database=require('/app/node_modules/better-sqlite3');
 async function main() {
   assert.equal(process.getuid(),1000);
   assert.equal(process.env.SMOKE_ROOT,'/smoke-data');
-  assert.equal(SCHEMA_VERSION,33);
+  assert.equal(SCHEMA_VERSION,34);
   assert.equal(typeof runNextVerificationJob,'function');
   assert.equal(typeof createLocalPublicationExport,'function');
   assert.equal(typeof runNextPublicationDelivery,'function');
